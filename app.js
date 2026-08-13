@@ -2,6 +2,7 @@
 
 const PROFILE_KEY = "balance.profile.v1";
 const RECORD_PREFIX = "balance.record.v1.";
+const WATER_GOAL_KEY = "balance.water.goal.v1";
 const STEP_COEFFICIENT = 298 / (83 * 7072);
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -25,6 +26,7 @@ const emptyRecord = (date) => ({
   date,
   menu: { totals: { calories: 0, proteins: 0, fats: 0, carbs: 0 } },
   activity: { burned_calories: 0 },
+  water: { goal_ml: savedWaterGoal(), consumed_ml: 0 },
 });
 
 let profile = normalizeProfile(readJSON(PROFILE_KEY));
@@ -45,6 +47,11 @@ function readJSON(key) {
 function numberFrom(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
   return Number(String(value ?? "").trim().replace(",", "."));
+}
+
+function savedWaterGoal() {
+  const value = numberFrom(readJSON(WATER_GOAL_KEY));
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 function normalizeProfile(candidate) {
@@ -81,7 +88,18 @@ function validRecord(candidate, fallbackDate) {
     }));
     const burned = numberFrom(candidate.activity.burned_calories);
     if (!Number.isFinite(burned) || burned < 0) throw new Error("Некорректное значение активности");
-    return { date, menu: { totals }, activity: { burned_calories: burned } };
+    const waterSource = candidate.water || {};
+    const waterGoal = numberFrom(waterSource.goal_ml ?? 0);
+    const waterConsumed = numberFrom(waterSource.consumed_ml ?? 0);
+    if (!Number.isFinite(waterGoal) || waterGoal < 0 || !Number.isFinite(waterConsumed) || waterConsumed < 0) {
+      throw new Error("Некорректные значения воды");
+    }
+    return {
+      date,
+      menu: { totals },
+      activity: { burned_calories: burned },
+      water: { goal_ml: waterGoal, consumed_ml: waterConsumed },
+    };
   } catch (error) {
     throw new Error(error.message || "Некорректная структура файла");
   }
@@ -127,8 +145,81 @@ function render() {
   $("#balance-menu").textContent = format(record.menu.totals.calories);
   $("#balance-activity").textContent = format(record.activity.burned_calories);
   renderBalance();
+  renderWater();
   renderSaveState("menu", menuDirty);
   renderSaveState("activity", activityDirty);
+}
+
+function renderWater() {
+  const goal = record.water?.goal_ml || 0;
+  const consumed = record.water?.consumed_ml || 0;
+  const percent = goal > 0 ? consumed / goal * 100 : 0;
+  const visiblePercent = Math.max(0, Math.min(100, percent));
+  const fill = $("#water-fill");
+  const bottle = $("#water-bottle");
+  fill.style.height = `${visiblePercent}%`;
+  bottle.setAttribute("aria-valuenow", String(consumed));
+  bottle.setAttribute("aria-valuemax", String(goal || 1));
+  $("#water-goal-label").textContent = goal > 0 ? `${format(goal)} мл` : "Норма";
+  $("#water-current-value").textContent = `${format(consumed)} мл`;
+  // The liquid chamber starts 25 px above the scale bottom and is 230 px tall.
+  $("#water-current-label").style.bottom = `${25 + visiblePercent * 2.3}px`;
+  $("#water-progress-caption").textContent = goal > 0
+    ? `${format(consumed)} из ${format(goal)} мл · ${format(percent)}%`
+    : `${format(consumed)} мл · укажите дневную норму`;
+  if (document.activeElement !== $("#water-goal")) $("#water-goal").value = goal || "";
+
+  const extra = goal > 0 ? Math.max(0, consumed - goal) : 0;
+  const glassCount = Math.floor(extra / 250);
+  const overage = $("#water-overage");
+  const glasses = $("#water-glasses");
+  overage.hidden = glassCount === 0;
+  glasses.replaceChildren(...Array.from({ length: glassCount }, (_, index) => {
+    const glass = document.createElement("span");
+    glass.className = "water-glass";
+    glass.setAttribute("aria-label", `Дополнительные ${250 * (index + 1)} мл`);
+    glass.innerHTML = "<i></i><small>+250</small>";
+    return glass;
+  }));
+}
+
+function saveWater() {
+  const saved = getStoredRecord(activeDate);
+  saved.water = structuredClone(record.water);
+  saved.date = activeDate;
+  storeRecord(saved);
+}
+
+function updateWaterGoal() {
+  try {
+    const goal = getPositive("#water-goal", "Дневная норма", { allowZero: false, integer: true });
+    record.water.goal_ml = goal;
+    localStorage.setItem(WATER_GOAL_KEY, JSON.stringify(goal));
+    saveWater();
+    renderWater();
+    toast(`Дневная норма воды: ${format(goal)} мл.`);
+  } catch (error) { toast(error.message, true); }
+}
+
+function addWater() {
+  try {
+    if (!(record.water.goal_ml > 0)) throw new Error("Сначала укажите дневную норму воды.");
+    const amount = getPositive("#water-amount", "Выпито сейчас", { allowZero: false, integer: true });
+    record.water.consumed_ml += amount;
+    $("#water-amount").value = "";
+    saveWater();
+    renderWater();
+    toast(`Добавлено ${format(amount)} мл воды.`);
+  } catch (error) { toast(error.message, true); }
+}
+
+function resetWater() {
+  if (!(record.water.consumed_ml > 0)) return;
+  if (!confirm(`Обнулить выпитую воду за ${displayDate(activeDate)}?`)) return;
+  record.water.consumed_ml = 0;
+  saveWater();
+  renderWater();
+  toast("Дневной объём воды обнулён.");
 }
 
 function renderSaveState(kind, dirty) {
@@ -667,6 +758,16 @@ function drawChart() {
 }
 
 function bindEvents() {
+  $("#water-goal").addEventListener("change", updateWaterGoal);
+  $("#water-goal").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); updateWaterGoal(); }
+  });
+  $("#water-add").addEventListener("click", addWater);
+  $("#water-amount").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") { event.preventDefault(); addWater(); }
+  });
+  $("#water-reset").addEventListener("click", resetWater);
+
   $("#nutrition-form").addEventListener("submit", (event) => { event.preventDefault(); calculateNutrition(); });
   $("#nutrition-form").addEventListener("reset", () => setTimeout(clearNutritionInputs));
   $("#nutrition-add").addEventListener("click", () => {
