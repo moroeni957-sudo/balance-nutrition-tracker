@@ -181,6 +181,11 @@ fieldset legend { margin-bottom: 8px; }
 .radio-card input { position: absolute; opacity: 0; pointer-events: none; }
 .radio-card span { display: block; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink); text-align: center; text-transform: none; }
 .radio-card input:checked + span { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+.profile-choice { margin-bottom: 8px; }
+.profile-choice .radio-card span { min-height: 72px; }
+.profile-choice strong, .profile-choice small { display: block; }
+.profile-choice small { margin-top: 4px; color: var(--muted); font-size: 10px; }
+#manual-profile-fields[hidden] { display: none; }
 .profile-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .form-error { min-height: 18px; margin: 12px 0 0; color: #b4442d; font-size: 11px; }
 
@@ -268,3 +273,4 @@ fieldset legend { margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
