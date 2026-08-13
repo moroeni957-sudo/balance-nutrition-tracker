@@ -9,4 +9,12 @@ window.GOOGLE_DRIVE_CONFIG = Object.freeze({
   folderId: "1POg8n0WkJTE7aUkNtZY7_c_C6Hf7RMcq",
   folderName: "Баланс питания и активности — данные",
   folderUrl: "https://drive.google.com/drive/folders/1POg8n0WkJTE7aUkNtZY7_c_C6Hf7RMcq",
+  profileFolders: Object.freeze({
+    Eni: Object.freeze({
+      id: "1Fut2GnirWBdocR1h0NaEwSJn80kyYtbK",
+      name: "Eni",
+      url: "https://drive.google.com/drive/folders/1Fut2GnirWBdocR1h0NaEwSJn80kyYtbK",
+    }),
+  }),
 });
+
