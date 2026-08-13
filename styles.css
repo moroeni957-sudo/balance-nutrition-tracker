@@ -169,7 +169,7 @@ label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; 
 footer { display: flex; justify-content: space-between; width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding: 30px 4px 45px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
 footer p { margin: 0; }
 
-dialog { width: min(560px, calc(100% - 28px)); padding: 0; border: 0; border-radius: 26px; color: var(--ink); background: var(--card); box-shadow: 0 35px 100px rgba(15,30,20,.28); }
+dialog { width: min(560px, calc(100% - 28px)); max-height: calc(100dvh - 28px); padding: 0; overflow-y: auto; border: 0; border-radius: 26px; color: var(--ink); background: var(--card); box-shadow: 0 35px 100px rgba(15,30,20,.28); }
 dialog::backdrop { background: rgba(18, 30, 23, .55); backdrop-filter: blur(5px); }
 #profile-dialog form { position: relative; padding: clamp(27px, 5vw, 45px); }
 dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
@@ -181,7 +181,8 @@ fieldset legend { margin-bottom: 8px; }
 .radio-card input { position: absolute; opacity: 0; pointer-events: none; }
 .radio-card span { display: block; margin: 0; padding: 14px; border: 1px solid var(--line); border-radius: 13px; color: var(--ink); text-align: center; text-transform: none; }
 .radio-card input:checked + span { border-color: var(--green); color: var(--green); background: var(--green-soft); }
-.profile-choice { margin-bottom: 8px; }
+.profile-choice { flex-wrap: wrap; margin-bottom: 8px; }
+.profile-choice .radio-card { flex: 1 1 140px; }
 .profile-choice .radio-card span { min-height: 72px; }
 .profile-choice strong, .profile-choice small { display: block; }
 .profile-choice small { margin-top: 4px; color: var(--muted); font-size: 10px; }
