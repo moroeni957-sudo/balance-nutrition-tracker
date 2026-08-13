@@ -371,7 +371,9 @@ async function authorizeDrive() {
         resolve(driveAccessToken);
       };
       driveTokenClient.error_callback = (error) => reject(new Error(error?.message || "Окно авторизации Google было закрыто."));
-      driveTokenClient.requestAccessToken({ prompt: "consent" });
+      // Google remembers the grant for this account and OAuth client.
+      // An empty prompt asks for consent only when it has not been granted yet.
+      driveTokenClient.requestAccessToken({ prompt: "" });
     });
   })();
   try { return await driveAuthPromise; }
@@ -694,3 +696,4 @@ async function init() {
 }
 
 init();
+
