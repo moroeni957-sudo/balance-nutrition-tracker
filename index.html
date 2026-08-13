@@ -7,11 +7,11 @@
   <meta name="theme-color" content="#f5f7f2">
   <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
   <title>Баланс — питание и активность</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
-  <script src="app.js?v=6" defer></script>
+  <script src="app.js?v=7" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -59,6 +59,46 @@
         <div><span class="stat-dot green"></span><p>Активность</p><strong><span id="balance-activity">0</span> <small>ккал</small></strong></div>
       </div>
       <button class="text-button" id="chart-button" type="button">Открыть динамику <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="water-card" aria-labelledby="water-title">
+      <div class="water-heading">
+        <div>
+          <p class="eyebrow">Гидратация</p>
+          <h2 id="water-title">Трекер воды</h2>
+          <p id="water-progress-caption" class="muted">0 мл · укажите дневную норму</p>
+        </div>
+        <button class="button button-danger" id="water-reset" type="button">Обнулить воду</button>
+      </div>
+
+      <div class="water-layout">
+        <div class="bottle-scale">
+          <span class="bottle-scale-top" id="water-goal-label">Норма</span>
+          <div class="water-bottle" id="water-bottle" role="meter" aria-label="Выпито воды" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0">
+            <span class="bottle-cap" aria-hidden="true"></span>
+            <span class="bottle-neck" aria-hidden="true"></span>
+            <span class="bottle-body" aria-hidden="true">
+              <span class="water-fill" id="water-fill"></span>
+              <span class="bottle-shine"></span>
+            </span>
+          </div>
+          <span class="bottle-scale-bottom">0 мл</span>
+          <span class="water-current-label" id="water-current-label"><strong id="water-current-value">0 мл</strong></span>
+        </div>
+
+        <div class="water-controls">
+          <label><span>Дневная норма</span><span class="input-unit"><input id="water-goal" inputmode="numeric" min="1" step="1" placeholder="Например, 2000"><small>мл</small></span></label>
+          <label><span>Выпито сейчас</span><span class="input-unit"><input id="water-amount" inputmode="numeric" min="1" step="1" placeholder="Например, 250"><small>мл</small></span></label>
+          <button class="button button-primary button-wide" id="water-add" type="button">Добавить воду</button>
+          <p class="water-hint">Норма сохраняется для следующих дней. Выпитый объём ведётся отдельно для каждой даты.</p>
+        </div>
+
+        <div class="water-overage" id="water-overage" hidden>
+          <p class="eyebrow">Сверх нормы</p>
+          <div class="water-glasses" id="water-glasses" aria-label="Дополнительная вода"></div>
+          <small>Один стакан — каждые дополнительные 250 мл</small>
+        </div>
+      </div>
     </section>
 
     <div class="workspace">
