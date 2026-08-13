@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
-  <script src="google-drive-config.js"></script>
-  <script src="app.js?v=4" defer></script>
+  <script src="google-drive-config.js?v=2"></script>
+  <script src="app.js?v=5" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -198,11 +198,14 @@
       <p class="eyebrow">Перед началом</p>
       <h2>Расскажите немного о себе</h2>
       <p class="muted">Эти данные нужны только для расчёта энергозатрат.</p>
-      <fieldset><legend>Пол</legend><label class="radio-card"><input type="radio" name="gender" value="male" required><span>Мужчина</span></label><label class="radio-card"><input type="radio" name="gender" value="female" required><span>Женщина</span></label></fieldset>
-      <div class="profile-fields">
+      <fieldset class="profile-choice"><legend>Профиль</legend><label class="radio-card"><input type="radio" name="profile-mode" value="Eni"><span><strong>Eni</strong><small>83 кг · 178 см · 32 года</small></span></label><label class="radio-card"><input type="radio" name="profile-mode" value="manual" checked><span><strong>Вручную</strong><small>Свои параметры</small></span></label></fieldset>
+      <div id="manual-profile-fields">
+        <fieldset><legend>Пол</legend><label class="radio-card"><input type="radio" name="gender" value="male" required><span>Мужчина</span></label><label class="radio-card"><input type="radio" name="gender" value="female" required><span>Женщина</span></label></fieldset>
+        <div class="profile-fields">
         <label><span>Вес</span><span class="input-unit"><input id="profile-weight" inputmode="decimal" min="1" step="any" required><small>кг</small></span></label>
         <label><span>Рост</span><span class="input-unit"><input id="profile-height" inputmode="decimal" min="1" step="any" required><small>см</small></span></label>
         <label><span>Возраст</span><span class="input-unit"><input id="profile-age" inputmode="numeric" min="1" step="1" required><small>лет</small></span></label>
+        </div>
       </div>
       <p class="form-error" id="profile-error" role="alert"></p>
       <button class="button button-primary button-wide" type="submit">Сохранить профиль</button>
