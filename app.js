@@ -7,6 +7,7 @@ const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
 const PROFILE_PRESETS = Object.freeze({
   Eni: Object.freeze({ mode: "Eni", gender: "male", weight: 83, height: 178, age: 32 }),
+  "Бусинка": Object.freeze({ mode: "Бусинка", gender: "female", weight: 63, height: 174, age: 35 }),
 });
 const MET = {
   cardio: { "Лёгкая": 3, "Умеренная": 5.5, "Высокая": 8 },
@@ -48,7 +49,7 @@ function numberFrom(value) {
 
 function normalizeProfile(candidate) {
   if (!candidate || typeof candidate !== "object") return null;
-  if (candidate.mode === "Eni") return { ...PROFILE_PRESETS.Eni };
+  if (Object.hasOwn(PROFILE_PRESETS, candidate.mode)) return { ...PROFILE_PRESETS[candidate.mode] };
   const gender = candidate.gender;
   const weight = numberFrom(candidate.weight);
   const height = numberFrom(candidate.height);
@@ -301,10 +302,11 @@ function clearPart(part, savedToo) {
 }
 
 function renderProfile() {
+  const presetName = profile && Object.hasOwn(PROFILE_PRESETS, profile.mode) ? profile.mode : null;
   $("#profile-summary").textContent = profile
-    ? `${profile.mode === "Eni" ? "Eni · " : ""}${format(profile.weight)} кг · ${profile.age} лет`
+    ? `${presetName ? `${presetName} · ` : ""}${format(profile.weight)} кг · ${profile.age} лет`
     : "Заполните профиль";
-  const mode = profile?.mode === "Eni" ? "Eni" : "manual";
+  const mode = presetName || "manual";
   $(`input[name="profile-mode"][value="${mode}"]`).checked = true;
   $$('input[name="gender"]').forEach((input) => { input.checked = input.value === profile?.gender; });
   $("#profile-weight").value = profile?.weight ?? "";
@@ -314,7 +316,7 @@ function renderProfile() {
 }
 
 function setProfileMode(mode) {
-  const presetSelected = mode === "Eni";
+  const presetSelected = Object.hasOwn(PROFILE_PRESETS, mode);
   const manualFields = $("#manual-profile-fields");
   manualFields.hidden = presetSelected;
   $$('input[name="gender"], #profile-weight, #profile-height, #profile-age', manualFields)
@@ -330,13 +332,13 @@ function openProfile() {
 function saveProfile(event) {
   event.preventDefault();
   const mode = $('input[name="profile-mode"]:checked')?.value || "manual";
-  if (mode === "Eni") {
-    profile = { ...PROFILE_PRESETS.Eni };
+  if (Object.hasOwn(PROFILE_PRESETS, mode)) {
+    profile = { ...PROFILE_PRESETS[mode] };
     localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
     $("#profile-error").textContent = "";
     renderProfile();
     $("#profile-dialog").close();
-    toast("Профиль Eni выбран.");
+    toast(`Профиль ${mode} выбран.`);
     return;
   }
   const gender = $('input[name="gender"]:checked')?.value;
@@ -427,10 +429,10 @@ async function driveFetch(url, options = {}) {
 
 function driveFolderForProfile() {
   const config = driveConfig();
-  if (profile?.mode === "Eni") {
-    const folder = config.profileFolders?.Eni;
-    if (!folder?.id) throw new Error("Папка профиля Eni не настроена.");
-    return { id: folder.id, name: folder.name || "Eni", url: folder.url || "" };
+  if (profile && Object.hasOwn(PROFILE_PRESETS, profile.mode)) {
+    const folder = config.profileFolders?.[profile.mode];
+    if (!folder?.id) throw new Error(`Папка профиля ${profile.mode} не настроена.`);
+    return { id: folder.id, name: folder.name || profile.mode, url: folder.url || "" };
   }
   return { id: config.folderId, name: config.folderName, url: config.folderUrl };
 }
