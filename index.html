@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#f5f7f2">
+  <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
+  <title>Баланс — питание и активность</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <script src="google-drive-config.js"></script>
+  <script src="app.js?v=3" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="Баланс — на главную">
+      <span class="brand-mark" aria-hidden="true">Б</span>
+      <span>
+        <strong>Баланс</strong>
+        <small>питание и активность</small>
+      </span>
+    </a>
+    <nav class="header-actions" aria-label="Действия">
+      <button class="button button-ghost" id="profile-button" type="button">Профиль</button>
+      <button class="button button-ghost" id="import-button" type="button" title="Загрузить архив из Google Drive">Импорт</button>
+      <button class="button button-dark" id="export-button" type="button" title="Сохранить выбранный день в Google Drive">Экспорт</button>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Ежедневный трекер</p>
+        <h1 id="page-title">Ваш день<br><em>в равновесии.</em></h1>
+        <p class="hero-copy">Считайте пищевую ценность, фиксируйте движение и наблюдайте за балансом — спокойно, точно, без лишнего шума.</p>
+      </div>
+      <div class="date-card">
+        <label for="active-date">Рабочая дата</label>
+        <input id="active-date" type="date">
+        <span id="date-caption">Сегодня</span>
+      </div>
+    </section>
+
+    <section class="balance-card" aria-labelledby="balance-title">
+      <div class="balance-copy">
+        <p class="eyebrow">Итог дня</p>
+        <h2 id="balance-title">Энергетический баланс</h2>
+        <p id="balance-status" class="balance-status neutral">Баланс <strong>0</strong> ккал</p>
+        <p class="muted">Потреблено минус затрачено</p>
+      </div>
+      <div class="gauge-wrap" aria-hidden="true">
+        <div class="gauge" id="balance-gauge"><span class="gauge-needle"></span><i></i></div>
+        <div class="gauge-labels"><span>Дефицит</span><span>Профицит</span></div>
+      </div>
+      <div class="balance-stats">
+        <div><span class="stat-dot coral"></span><p>Питание</p><strong><span id="balance-menu">0</span> <small>ккал</small></strong></div>
+        <div><span class="stat-dot green"></span><p>Активность</p><strong><span id="balance-activity">0</span> <small>ккал</small></strong></div>
+      </div>
+      <button class="text-button" id="chart-button" type="button">Открыть динамику <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <div class="workspace">
+      <section class="calculator-card nutrition" aria-labelledby="nutrition-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-number">01 / Питание</p>
+            <h2 id="nutrition-title">Калькулятор порции</h2>
+          </div>
+          <p>Значения на 100 г</p>
+        </div>
+
+        <form id="nutrition-form" novalidate>
+          <div class="field-grid nutrition-fields">
+            <label><span>Калорийность</span><span class="input-unit"><input id="food-calories" inputmode="decimal" min="0" step="any" required><small>ккал</small></span></label>
+            <label><span>Белки</span><span class="input-unit"><input id="food-proteins" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label><span>Жиры</span><span class="input-unit"><input id="food-fats" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label><span>Углеводы</span><span class="input-unit"><input id="food-carbs" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label class="portion-field"><span>Размер порции</span><span class="input-unit"><input id="food-portion" inputmode="decimal" min="0.01" step="any" required><small>г</small></span></label>
+          </div>
+          <div class="form-actions">
+            <button class="button button-primary" type="submit">Рассчитать</button>
+            <button class="button button-accent" id="nutrition-add" type="button">Добавить в день</button>
+            <button class="button button-link" id="nutrition-reset" type="reset">Очистить</button>
+          </div>
+        </form>
+
+        <div class="result-strip" aria-live="polite">
+          <p>В порции</p>
+          <div><span>Калории</span><strong id="result-calories">—</strong><small>ккал</small></div>
+          <div><span>Белки</span><strong id="result-proteins">—</strong><small>г</small></div>
+          <div><span>Жиры</span><strong id="result-fats">—</strong><small>г</small></div>
+          <div><span>Углеводы</span><strong id="result-carbs">—</strong><small>г</small></div>
+        </div>
+
+        <div class="daily-block">
+          <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневное меню</h3></div><span id="menu-save-state">Не сохранено</span></div>
+          <div class="metric-grid">
+            <div><span>Калории</span><strong id="daily-calories">0</strong><small>ккал</small></div>
+            <div><span>Белки</span><strong id="daily-proteins">0</strong><small>г</small></div>
+            <div><span>Жиры</span><strong id="daily-fats">0</strong><small>г</small></div>
+            <div><span>Углеводы</span><strong id="daily-carbs">0</strong><small>г</small></div>
+          </div>
+          <div class="manual-row">
+            <label><span>Добавить калории вручную</span><span class="input-unit compact"><input id="manual-menu" inputmode="decimal" min="0" step="any"><small>ккал</small></span></label>
+            <button class="button button-small button-ghost" id="manual-menu-add" type="button">Добавить</button>
+          </div>
+          <div class="daily-actions">
+            <button class="button button-dark" id="save-menu" type="button">Сохранить меню</button>
+            <button class="button button-ghost" id="clear-menu-screen" type="button">Обнулить на экране</button>
+            <button class="button button-danger" id="clear-menu-saved" type="button">Удалить из архива</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="calculator-card activity" aria-labelledby="activity-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-number">02 / Активность</p>
+            <h2 id="activity-title">Расход энергии</h2>
+          </div>
+          <p id="profile-summary">Заполните профиль</p>
+        </div>
+
+        <div class="activity-list">
+          <article class="activity-row">
+            <div class="activity-icon" aria-hidden="true">☾</div>
+            <div class="activity-name"><h3>Состояние покоя</h3><p>Базовый обмен за период</p></div>
+            <div class="inline-fields">
+              <label><span class="sr-only">Часы</span><input id="rest-hours" inputmode="decimal" min="0" step="any" placeholder="0"><small>ч</small></label>
+              <label><span class="sr-only">Минуты</span><input id="rest-minutes" inputmode="numeric" min="0" max="59" step="1" placeholder="00"><small>мин</small></label>
+            </div>
+            <button class="round-button" data-calculate="rest" type="button" aria-label="Рассчитать состояние покоя">→</button>
+            <output id="rest-result"><strong>—</strong><small>ккал</small></output>
+          </article>
+
+          <article class="activity-row">
+            <div class="activity-icon" aria-hidden="true">↟</div>
+            <div class="activity-name"><h3>Шаги</h3><p>Ходьба в течение дня</p></div>
+            <div class="inline-fields single">
+              <label><span class="sr-only">Количество шагов</span><input id="steps" inputmode="numeric" min="1" step="1" placeholder="0"><small>шагов</small></label>
+            </div>
+            <button class="round-button" data-calculate="steps" type="button" aria-label="Рассчитать шаги">→</button>
+            <output id="steps-result"><strong>—</strong><small>ккал</small></output>
+          </article>
+
+          <article class="activity-row">
+            <div class="activity-icon" aria-hidden="true">⌁</div>
+            <div class="activity-name"><h3>Кардио</h3><p>Аэробная нагрузка</p></div>
+            <div class="inline-fields sport-fields">
+              <label><span class="sr-only">Минуты кардио</span><input id="cardio-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>мин</small></label>
+              <label><span class="sr-only">Интенсивность кардио</span><select id="cardio-intensity"><option>Лёгкая</option><option selected>Умеренная</option><option>Высокая</option></select></label>
+            </div>
+            <button class="round-button" data-calculate="cardio" type="button" aria-label="Рассчитать кардио">→</button>
+            <output id="cardio-result"><strong>—</strong><small>ккал</small></output>
+          </article>
+
+          <article class="activity-row">
+            <div class="activity-icon" aria-hidden="true">◆</div>
+            <div class="activity-name"><h3>Силовые</h3><p>Работа с нагрузкой</p></div>
+            <div class="inline-fields sport-fields">
+              <label><span class="sr-only">Минуты силовой тренировки</span><input id="strength-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>мин</small></label>
+              <label><span class="sr-only">Интенсивность силовой тренировки</span><select id="strength-intensity"><option>Лёгкая</option><option selected>Умеренная</option><option>Высокая</option></select></label>
+            </div>
+            <button class="round-button" data-calculate="strength" type="button" aria-label="Рассчитать силовые">→</button>
+            <output id="strength-result"><strong>—</strong><small>ккал</small></output>
+          </article>
+        </div>
+
+        <div class="form-actions activity-actions">
+          <button class="button button-accent" id="activity-add" type="button">Добавить заполненное в день</button>
+          <button class="button button-link" id="activity-reset" type="button">Очистить ввод</button>
+        </div>
+
+        <div class="daily-block activity-daily">
+          <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневная активность</h3></div><span id="activity-save-state">Не сохранено</span></div>
+          <div class="activity-total"><span>Всего затрачено</span><strong id="daily-activity">0</strong><small>ккал</small></div>
+          <div class="manual-row">
+            <label><span>Добавить энергозатраты вручную</span><span class="input-unit compact"><input id="manual-activity" inputmode="decimal" min="0" step="any"><small>ккал</small></span></label>
+            <button class="button button-small button-ghost" id="manual-activity-add" type="button">Добавить</button>
+          </div>
+          <div class="daily-actions">
+            <button class="button button-dark" id="save-activity" type="button">Сохранить активность</button>
+            <button class="button button-ghost" id="clear-activity-screen" type="button">Обнулить на экране</button>
+            <button class="button button-danger" id="clear-activity-saved" type="button">Удалить из архива</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer><p>Данные хранятся только в вашем браузере.</p><button class="text-button" id="export-all-button" type="button">Скачать весь архив →</button></footer>
+
+  <dialog id="profile-dialog">
+    <form id="profile-form" method="dialog">
+      <button class="dialog-close" type="button" data-close="profile-dialog" aria-label="Закрыть">×</button>
+      <p class="eyebrow">Перед началом</p>
+      <h2>Расскажите немного о себе</h2>
+      <p class="muted">Эти данные нужны только для расчёта энергозатрат.</p>
+      <fieldset><legend>Пол</legend><label class="radio-card"><input type="radio" name="gender" value="male" required><span>Мужчина</span></label><label class="radio-card"><input type="radio" name="gender" value="female" required><span>Женщина</span></label></fieldset>
+      <div class="profile-fields">
+        <label><span>Вес</span><span class="input-unit"><input id="profile-weight" inputmode="decimal" min="1" step="any" required><small>кг</small></span></label>
+        <label><span>Рост</span><span class="input-unit"><input id="profile-height" inputmode="decimal" min="1" step="any" required><small>см</small></span></label>
+        <label><span>Возраст</span><span class="input-unit"><input id="profile-age" inputmode="numeric" min="1" step="1" required><small>лет</small></span></label>
+      </div>
+      <p class="form-error" id="profile-error" role="alert"></p>
+      <button class="button button-primary button-wide" type="submit">Сохранить профиль</button>
+    </form>
+  </dialog>
+
+  <dialog id="chart-dialog" class="chart-dialog">
+    <div class="chart-head"><div><p class="eyebrow">История</p><h2>Динамика баланса</h2></div><button class="dialog-close" type="button" data-close="chart-dialog" aria-label="Закрыть">×</button></div>
+    <div class="chart-controls">
+      <label>Период <select id="chart-period"><option value="7">1 неделя</option><option value="30">1 месяц</option><option value="90">3 месяца</option><option value="180">6 месяцев</option></select></label>
+      <p id="chart-total">Баланс за период: <strong>0 ккал</strong></p>
+    </div>
+    <div class="chart-canvas-wrap"><canvas id="balance-chart" width="900" height="420">График баланса калорий</canvas></div>
+    <div class="chart-legend"><span><i class="green"></i>Профицит</span><span><i class="coral"></i>Дефицит</span></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
