@@ -15,6 +15,11 @@ window.GOOGLE_DRIVE_CONFIG = Object.freeze({
       name: "Eni",
       url: "https://drive.google.com/drive/folders/1Fut2GnirWBdocR1h0NaEwSJn80kyYtbK",
     }),
+    "Бусинка": Object.freeze({
+      id: "1m22nBlO54zHs8aY79fgoI1pUggJcWGvw",
+      name: "Бусинка",
+      url: "https://drive.google.com/drive/folders/1m22nBlO54zHs8aY79fgoI1pUggJcWGvw",
+    }),
   }),
 });
 
