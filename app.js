@@ -5,6 +5,9 @@ const RECORD_PREFIX = "balance.record.v1.";
 const STEP_COEFFICIENT = 298 / (83 * 7072);
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
+const PROFILE_PRESETS = Object.freeze({
+  Eni: Object.freeze({ mode: "Eni", gender: "male", weight: 83, height: 178, age: 32 }),
+});
 const MET = {
   cardio: { "Лёгкая": 3, "Умеренная": 5.5, "Высокая": 8 },
   strength: { "Лёгкая": 2, "Умеренная": 4, "Высокая": 6 },
@@ -23,7 +26,7 @@ const emptyRecord = (date) => ({
   activity: { burned_calories: 0 },
 });
 
-let profile = readJSON(PROFILE_KEY);
+let profile = normalizeProfile(readJSON(PROFILE_KEY));
 let activeDate = todayISO();
 let record = emptyRecord(activeDate);
 let menuDirty = false;
@@ -41,6 +44,17 @@ function readJSON(key) {
 function numberFrom(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
   return Number(String(value ?? "").trim().replace(",", "."));
+}
+
+function normalizeProfile(candidate) {
+  if (!candidate || typeof candidate !== "object") return null;
+  if (candidate.mode === "Eni") return { ...PROFILE_PRESETS.Eni };
+  const gender = candidate.gender;
+  const weight = numberFrom(candidate.weight);
+  const height = numberFrom(candidate.height);
+  const age = numberFrom(candidate.age);
+  if (!["male", "female"].includes(gender) || weight <= 0 || height <= 0 || age <= 0 || !Number.isInteger(age)) return null;
+  return { mode: "manual", gender, weight, height, age };
 }
 
 function format(value) {
@@ -287,12 +301,24 @@ function clearPart(part, savedToo) {
 }
 
 function renderProfile() {
-  $("#profile-summary").textContent = profile ? `${format(profile.weight)} кг · ${profile.age} лет` : "Заполните профиль";
-  if (!profile) return;
-  $(`input[name="gender"][value="${profile.gender}"]`).checked = true;
-  $("#profile-weight").value = profile.weight;
-  $("#profile-height").value = profile.height;
-  $("#profile-age").value = profile.age;
+  $("#profile-summary").textContent = profile
+    ? `${profile.mode === "Eni" ? "Eni · " : ""}${format(profile.weight)} кг · ${profile.age} лет`
+    : "Заполните профиль";
+  const mode = profile?.mode === "Eni" ? "Eni" : "manual";
+  $(`input[name="profile-mode"][value="${mode}"]`).checked = true;
+  $$('input[name="gender"]').forEach((input) => { input.checked = input.value === profile?.gender; });
+  $("#profile-weight").value = profile?.weight ?? "";
+  $("#profile-height").value = profile?.height ?? "";
+  $("#profile-age").value = profile?.age ?? "";
+  setProfileMode(mode);
+}
+
+function setProfileMode(mode) {
+  const presetSelected = mode === "Eni";
+  const manualFields = $("#manual-profile-fields");
+  manualFields.hidden = presetSelected;
+  $$('input[name="gender"], #profile-weight, #profile-height, #profile-age', manualFields)
+    .forEach((input) => { input.disabled = presetSelected; });
 }
 
 function openProfile() {
@@ -303,6 +329,16 @@ function openProfile() {
 
 function saveProfile(event) {
   event.preventDefault();
+  const mode = $('input[name="profile-mode"]:checked')?.value || "manual";
+  if (mode === "Eni") {
+    profile = { ...PROFILE_PRESETS.Eni };
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    $("#profile-error").textContent = "";
+    renderProfile();
+    $("#profile-dialog").close();
+    toast("Профиль Eni выбран.");
+    return;
+  }
   const gender = $('input[name="gender"]:checked')?.value;
   const weight = numberFrom($("#profile-weight").value);
   const height = numberFrom($("#profile-height").value);
@@ -311,7 +347,7 @@ function saveProfile(event) {
     $("#profile-error").textContent = "Выберите пол, укажите положительные вес и рост, а возраст — целым числом.";
     return;
   }
-  profile = { gender, weight, height, age };
+  profile = { mode: "manual", gender, weight, height, age };
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
   $("#profile-error").textContent = "";
   renderProfile();
@@ -389,13 +425,22 @@ async function driveFetch(url, options = {}) {
   return response;
 }
 
-async function canAccessDriveFolder() {
+function driveFolderForProfile() {
   const config = driveConfig();
-  const response = await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(config.folderId)}?fields=id,name,mimeType&supportsAllDrives=true`);
+  if (profile?.mode === "Eni") {
+    const folder = config.profileFolders?.Eni;
+    if (!folder?.id) throw new Error("Папка профиля Eni не настроена.");
+    return { id: folder.id, name: folder.name || "Eni", url: folder.url || "" };
+  }
+  return { id: config.folderId, name: config.folderName, url: config.folderUrl };
+}
+
+async function canAccessDriveFolder(folderId) {
+  const response = await driveFetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(folderId)}?fields=id,name,mimeType&supportsAllDrives=true`);
   return response.ok;
 }
 
-async function selectProjectFolder() {
+async function selectProjectFolder(folder) {
   const config = driveConfig();
   await waitForGoogleApi("picker");
   return new Promise((resolve, reject) => {
@@ -407,13 +452,13 @@ async function selectProjectFolder() {
       .setAppId(config.appId)
       .setDeveloperKey(config.apiKey)
       .setOAuthToken(driveAccessToken)
-      .setTitle(`Выберите папку «${config.folderName}»`)
+      .setTitle(`Выберите папку «${folder.name}»`)
       .addView(view)
       .setCallback((data) => {
         if (data.action === google.picker.Action.CANCEL) reject(new Error("Выбор папки отменён."));
         if (data.action !== google.picker.Action.PICKED) return;
         const selectedId = data.docs?.[0]?.id;
-        if (selectedId !== config.folderId) return reject(new Error(`Выберите папку «${config.folderName}».`));
+        if (selectedId !== folder.id) return reject(new Error(`Выберите папку «${folder.name}».`));
         resolve(selectedId);
       })
       .build();
@@ -422,16 +467,17 @@ async function selectProjectFolder() {
 }
 
 async function ensureDriveFolderAccess() {
+  const folder = driveFolderForProfile();
   await authorizeDrive();
-  if (await canAccessDriveFolder()) return;
-  await selectProjectFolder();
-  if (!await canAccessDriveFolder()) throw new Error("Папка не предоставлена приложению.");
+  if (await canAccessDriveFolder(folder.id)) return folder;
+  await selectProjectFolder(folder);
+  if (!await canAccessDriveFolder(folder.id)) throw new Error("Папка не предоставлена приложению.");
+  return folder;
 }
 
-async function listDriveJsonFiles(fileName = null) {
-  const config = driveConfig();
+async function listDriveJsonFiles(folderId, fileName = null) {
   const clauses = [
-    `'${config.folderId.replaceAll("'", "\\'")}' in parents`,
+    `'${folderId.replaceAll("'", "\\'")}' in parents`,
     "trashed = false",
     "mimeType = 'application/json'",
   ];
@@ -454,10 +500,9 @@ async function exportCurrentDayToDrive() {
   const button = $("#export-button");
   button.disabled = true;
   try {
-    await ensureDriveFolderAccess();
-    const config = driveConfig();
+    const folder = await ensureDriveFolderAccess();
     const filename = `Меню и активность ${activeDate}.json`;
-    const existing = (await listDriveJsonFiles(filename))[0];
+    const existing = (await listDriveJsonFiles(folder.id, filename))[0];
     const content = JSON.stringify(record, null, 2);
     let response;
     if (existing) {
@@ -468,7 +513,7 @@ async function exportCurrentDayToDrive() {
       });
     } else {
       const boundary = `balance_${crypto.randomUUID().replaceAll("-", "")}`;
-      const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: filename, mimeType: "application/json", parents: [config.folderId] })}\r\n--${boundary}\r\nContent-Type: application/json;charset=utf-8\r\n\r\n${content}\r\n--${boundary}--`;
+      const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: filename, mimeType: "application/json", parents: [folder.id] })}\r\n--${boundary}\r\nContent-Type: application/json;charset=utf-8\r\n\r\n${content}\r\n--${boundary}--`;
       response = await driveFetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,modifiedTime", {
         method: "POST",
         headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
@@ -480,7 +525,7 @@ async function exportCurrentDayToDrive() {
     menuDirty = false;
     activityDirty = false;
     render();
-    toast(`${filename} загружен в Google Drive.`);
+    toast(`${filename} загружен в папку «${folder.name}».`);
   } catch (error) { toast(error.message, true); }
   finally { button.disabled = false; }
 }
@@ -489,8 +534,8 @@ async function importArchiveFromDrive() {
   const button = $("#import-button");
   button.disabled = true;
   try {
-    await ensureDriveFolderAccess();
-    const files = await listDriveJsonFiles();
+    const folder = await ensureDriveFolderAccess();
+    const files = await listDriveJsonFiles(folder.id);
     let imported = 0;
     let skipped = 0;
     for (const file of files) {
@@ -504,7 +549,7 @@ async function importArchiveFromDrive() {
     }
     await loadDate(activeDate);
     drawChart();
-    toast(`Из Google Drive загружено записей: ${imported}${skipped ? `, пропущено: ${skipped}` : ""}.`);
+    toast(`Из папки «${folder.name}» загружено записей: ${imported}${skipped ? `, пропущено: ${skipped}` : ""}.`);
   } catch (error) { toast(error.message, true); }
   finally { button.disabled = false; }
 }
@@ -532,9 +577,9 @@ async function importJSON(file) {
         imported += 1;
       }
       if (data.profile) {
-        const candidate = data.profile;
-        if (["male", "female"].includes(candidate.gender) && numberFrom(candidate.weight) > 0 && numberFrom(candidate.height) > 0 && Number.isInteger(numberFrom(candidate.age)) && numberFrom(candidate.age) > 0) {
-          profile = { gender: candidate.gender, weight: numberFrom(candidate.weight), height: numberFrom(candidate.height), age: numberFrom(candidate.age) };
+        const candidate = normalizeProfile(data.profile);
+        if (candidate) {
+          profile = candidate;
           localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
           renderProfile();
         }
@@ -673,6 +718,7 @@ function bindEvents() {
 
   $("#profile-button").addEventListener("click", openProfile);
   $("#profile-form").addEventListener("submit", saveProfile);
+  $$('input[name="profile-mode"]').forEach((input) => input.addEventListener("change", (event) => setProfileMode(event.target.value)));
   $$('[data-close]').forEach((button) => button.addEventListener("click", () => $(`#${button.dataset.close}`).close()));
 
   $("#import-button").addEventListener("click", importArchiveFromDrive);
