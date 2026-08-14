@@ -7,11 +7,12 @@
   <meta name="theme-color" content="#f5f7f2">
   <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
   <title>Баланс — питание и активность</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
-  <script src="app.js?v=8" defer></script>
+  <script src="chat-config.js?v=1"></script>
+  <script src="app.js?v=9" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -133,6 +134,27 @@
           <div><span>Жиры</span><strong id="result-fats">—</strong><small>г</small></div>
           <div><span>Углеводы</span><strong id="result-carbs">—</strong><small>г</small></div>
         </div>
+
+        <section class="codex-chat" aria-labelledby="codex-chat-title">
+          <div class="codex-chat-heading">
+            <div>
+              <p class="eyebrow">Помощник проекта</p>
+              <h3 id="codex-chat-title">Спросить Codex</h3>
+            </div>
+            <span class="codex-chat-status" id="codex-chat-status">Облачный чат</span>
+          </div>
+          <form id="codex-chat-form">
+            <label for="codex-chat-input">Ваш вопрос</label>
+            <textarea id="codex-chat-input" maxlength="1000" rows="4" placeholder="Например: как рассчитывается расход калорий?" required></textarea>
+            <div class="codex-chat-actions">
+              <small>Вопрос передаётся отдельному помощнику, связанному с публичным репозиторием проекта.</small>
+              <button class="button button-primary" id="codex-chat-send" type="submit">Отправить</button>
+            </div>
+          </form>
+          <div class="codex-chat-output" id="codex-chat-output" role="status" aria-live="polite">
+            <span>Ответ появится здесь.</span>
+          </div>
+        </section>
 
         <div class="daily-block">
           <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневное меню</h3></div><span id="menu-save-state">Не сохранено</span></div>
