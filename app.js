@@ -3,6 +3,8 @@
 const PROFILE_KEY = "balance.profile.v1";
 const RECORD_PREFIX = "balance.record.v1.";
 const WATER_GOAL_KEY = "balance.water.goal.v1";
+const CHAT_HISTORY_KEY = "balance.codex.history.v1";
+const CHAT_SESSION_KEY = "balance.codex.session.v1";
 const STEP_COEFFICIENT = 298 / (83 * 7072);
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -38,10 +40,76 @@ let toastTimer;
 let driveAccessToken = null;
 let driveTokenClient = null;
 let driveAuthPromise = null;
+let chatHistory = normalizeChatHistory(readJSON(CHAT_HISTORY_KEY));
 
 function readJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); }
   catch { return null; }
+}
+
+function normalizeChatHistory(candidate) {
+  if (!Array.isArray(candidate)) return [];
+  return candidate
+    .filter((item) => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
+    .map((item) => ({ role: item.role, content: item.content.slice(0, 2000) }))
+    .slice(-8);
+}
+
+function chatSessionId() {
+  let id = localStorage.getItem(CHAT_SESSION_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(CHAT_SESSION_KEY, id);
+  }
+  return id;
+}
+
+function chatEndpoint() {
+  const endpoint = window.BALANCE_CHAT_CONFIG?.endpoint;
+  return typeof endpoint === "string" ? endpoint.trim() : "";
+}
+
+async function sendCodexQuestion(event) {
+  event.preventDefault();
+  const input = $("#codex-chat-input");
+  const output = $("#codex-chat-output");
+  const button = $("#codex-chat-send");
+  const message = input.value.trim();
+  const endpoint = chatEndpoint();
+  if (!message) return;
+  if (!endpoint || endpoint.includes("PASTE_CLOUD_RUN_URL")) {
+    output.className = "codex-chat-output error";
+    output.textContent = "Облачный чат ещё не подключён. Попробуйте позже.";
+    return;
+  }
+
+  button.disabled = true;
+  input.disabled = true;
+  output.className = "codex-chat-output loading";
+  output.textContent = "Codex готовит ответ…";
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, session_id: chatSessionId(), history: chatHistory }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Сервер вернул ошибку ${response.status}.`);
+    if (typeof data.answer !== "string" || !data.answer.trim()) throw new Error("Codex не вернул текст ответа.");
+    const answer = data.answer.trim();
+    chatHistory = [...chatHistory, { role: "user", content: message }, { role: "assistant", content: answer }].slice(-8);
+    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
+    output.className = "codex-chat-output";
+    output.textContent = answer;
+    input.value = "";
+  } catch (error) {
+    output.className = "codex-chat-output error";
+    output.textContent = error.message || "Не удалось получить ответ. Попробуйте ещё раз.";
+  } finally {
+    button.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
 }
 
 function numberFrom(value) {
@@ -758,6 +826,8 @@ function drawChart() {
 }
 
 function bindEvents() {
+  $("#codex-chat-form").addEventListener("submit", sendCodexQuestion);
+
   $("#water-goal").addEventListener("change", updateWaterGoal);
   $("#water-goal").addEventListener("keydown", (event) => {
     if (event.key === "Enter") { event.preventDefault(); updateWaterGoal(); }
