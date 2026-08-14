@@ -1,13 +1,12 @@
-# Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ Codex-worker
+# Локальный Codex-worker
 
-Worker ÐºÐ°Ð¶Ð´Ñ‹Ðµ 10 ÑÐµÐºÑƒÐ½Ð´ Ð¿Ñ€Ð¾Ð²ÐµÑ€ÑÐµÑ‚ Ð¿Ð°Ð¿ÐºÑƒ `Codex Chat Queue` Ð½Ð° Google Drive, Ð·Ð°Ð¿ÑƒÑÐºÐ°ÐµÑ‚ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ `codex exec` Ð² Ñ€ÐµÐ¶Ð¸Ð¼Ðµ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ñ‡Ñ‚ÐµÐ½Ð¸Ñ Ð¸ ÑÐ¾Ð·Ð´Ð°Ñ‘Ñ‚ `answer_<id>.json`.
+Worker каждые 10 секунд проверяет папку `Codex Chat Queue` на Google Drive, запускает локальный `codex exec` в режиме только для чтения и создаёт `answer_<id>.json`.
 
-## ÐŸÐµÑ€Ð²Ñ‹Ð¹ Ð·Ð°Ð¿ÑƒÑÐº
+## Первый запуск
 
-1. Ð’ Google Cloud Console ÑÐ¾Ð·Ð´Ð°Ð¹Ñ‚Ðµ OAuth client Ñ‚Ð¸Ð¿Ð° **Desktop app** Ð¸ ÑÐºÐ°Ñ‡Ð°Ð¹Ñ‚Ðµ JSON.
-2. Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚Ðµ Ñ„Ð°Ð¹Ð» ÐºÐ°Ðº `chat-worker/credentials.local.json`.
-3. Ð’Ñ‹Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ `npm install` Ð² Ð¿Ð°Ð¿ÐºÐµ `chat-worker`.
-4. Ð’Ñ‹Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ `npm start`. ÐŸÑ€Ð¸ Ð¿ÐµÑ€Ð²Ð¾Ð¼ Ð·Ð°Ð¿ÑƒÑÐºÐµ Ð¾Ñ‚ÐºÑ€Ð¾ÐµÑ‚ÑÑ Google OAuth; Ð¿Ð¾ÑÐ»Ðµ ÑÐ¾Ð³Ð»Ð°ÑÐ¸Ñ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¾ Ð¿Ð¾ÑÐ²Ð¸Ñ‚ÑÑ `token.local.json`.
+1. В Google Cloud Console создайте OAuth client типа **Desktop app** и скачайте JSON.
+2. Сохраните файл как `chat-worker/credentials.local.json`.
+3. Выполните `npm install` в папке `chat-worker`.
+4. Выполните `npm start`. При первом запуске откроется Google OAuth; после согласия локально появится `token.local.json`.
 
-`credentials.local.json` Ð¸ `token.local.json` Ð¸ÑÐºÐ»ÑŽÑ‡ÐµÐ½Ñ‹ Ð¸Ð· Git Ð¸ Ð½Ðµ Ð´Ð¾Ð»Ð¶Ð½Ñ‹ Ð¿ÑƒÐ±Ð»Ð¸ÐºÐ¾Ð²Ð°Ñ‚ÑŒÑÑ.
-
+`credentials.local.json` и `token.local.json` исключены из Git и не должны публиковаться.

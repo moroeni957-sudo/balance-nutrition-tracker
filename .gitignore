@@ -4,4 +4,3 @@ chat-worker/token.local.json
 chat-worker/oauth-url.local.txt
 chat-worker/.answer-*.tmp
 .local-server*.log
-

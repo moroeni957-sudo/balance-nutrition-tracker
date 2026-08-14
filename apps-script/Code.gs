@@ -9,7 +9,7 @@ function doPost(event) {
     if (payload.action !== "enqueue") throw new Error("Unknown action");
     const requestId = validateRequestId_(payload.request_id);
     const message = String(payload.message || "").trim();
-    if (!message || message.length > 1000) throw new Error("Question must contain 1â€“1000 characters");
+    if (!message || message.length > 1000) throw new Error("Question must contain 1–1000 characters");
 
     const lock = LockService.getScriptLock();
     lock.waitLock(10000);
@@ -115,4 +115,3 @@ function javascript_(callback, value) {
   return ContentService.createTextOutput(callback + "(" + JSON.stringify(value) + ");")
     .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
-

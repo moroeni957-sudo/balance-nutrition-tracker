@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="strict-origin-when-cross-origin">
   <meta name="theme-color" content="#f5f7f2">
-  <meta name="description" content="ÐšÐ°Ð»ÑŒÐºÑƒÐ»ÑÑ‚Ð¾Ñ€ Ð¿Ð¸Ñ‚Ð°Ð½Ð¸Ñ, Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸ Ð¸ Ð´Ð½ÐµÐ²Ð½Ð¾Ð³Ð¾ Ð±Ð°Ð»Ð°Ð½ÑÐ° ÐºÐ°Ð»Ð¾Ñ€Ð¸Ð¹">
-  <title>Ð‘Ð°Ð»Ð°Ð½Ñ â€” Ð¿Ð¸Ñ‚Ð°Ð½Ð¸Ðµ Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</title>
+  <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
+  <title>Баланс — питание и активность</title>
   <link rel="stylesheet" href="styles.css?v=3">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
@@ -16,66 +16,66 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="#top" aria-label="Ð‘Ð°Ð»Ð°Ð½Ñ â€” Ð½Ð° Ð³Ð»Ð°Ð²Ð½ÑƒÑŽ">
-      <span class="brand-mark" aria-hidden="true">Ð‘</span>
+    <a class="brand" href="#top" aria-label="Баланс — на главную">
+      <span class="brand-mark" aria-hidden="true">Б</span>
       <span>
-        <strong>Ð‘Ð°Ð»Ð°Ð½Ñ</strong>
-        <small>Ð¿Ð¸Ñ‚Ð°Ð½Ð¸Ðµ Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</small>
+        <strong>Баланс</strong>
+        <small>питание и активность</small>
       </span>
     </a>
-    <nav class="header-actions" aria-label="Ð”ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ">
-      <button class="button button-ghost" id="profile-button" type="button">ÐŸÑ€Ð¾Ñ„Ð¸Ð»ÑŒ</button>
-      <button class="button button-ghost" id="import-button" type="button" title="Ð—Ð°Ð³Ñ€ÑƒÐ·Ð¸Ñ‚ÑŒ Ð°Ñ€Ñ…Ð¸Ð² Ð¸Ð· Google Drive">Ð˜Ð¼Ð¿Ð¾Ñ€Ñ‚</button>
-      <button class="button button-dark" id="export-button" type="button" title="Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð²Ñ‹Ð±Ñ€Ð°Ð½Ð½Ñ‹Ð¹ Ð´ÐµÐ½ÑŒ Ð² Google Drive">Ð­ÐºÑÐ¿Ð¾Ñ€Ñ‚</button>
+    <nav class="header-actions" aria-label="Действия">
+      <button class="button button-ghost" id="profile-button" type="button">Профиль</button>
+      <button class="button button-ghost" id="import-button" type="button" title="Загрузить архив из Google Drive">Импорт</button>
+      <button class="button button-dark" id="export-button" type="button" title="Сохранить выбранный день в Google Drive">Экспорт</button>
     </nav>
   </header>
 
   <main id="top">
     <section class="hero" aria-labelledby="page-title">
       <div>
-        <p class="eyebrow">Ð•Ð¶ÐµÐ´Ð½ÐµÐ²Ð½Ñ‹Ð¹ Ñ‚Ñ€ÐµÐºÐµÑ€</p>
-        <h1 id="page-title">Ð’Ð°Ñˆ Ð´ÐµÐ½ÑŒ<br><em>Ð² Ñ€Ð°Ð²Ð½Ð¾Ð²ÐµÑÐ¸Ð¸.</em></h1>
-        <p class="hero-copy">Ð¡Ñ‡Ð¸Ñ‚Ð°Ð¹Ñ‚Ðµ Ð¿Ð¸Ñ‰ÐµÐ²ÑƒÑŽ Ñ†ÐµÐ½Ð½Ð¾ÑÑ‚ÑŒ, Ñ„Ð¸ÐºÑÐ¸Ñ€ÑƒÐ¹Ñ‚Ðµ Ð´Ð²Ð¸Ð¶ÐµÐ½Ð¸Ðµ Ð¸ Ð½Ð°Ð±Ð»ÑŽÐ´Ð°Ð¹Ñ‚Ðµ Ð·Ð° Ð±Ð°Ð»Ð°Ð½ÑÐ¾Ð¼ â€” ÑÐ¿Ð¾ÐºÐ¾Ð¹Ð½Ð¾, Ñ‚Ð¾Ñ‡Ð½Ð¾, Ð±ÐµÐ· Ð»Ð¸ÑˆÐ½ÐµÐ³Ð¾ ÑˆÑƒÐ¼Ð°.</p>
+        <p class="eyebrow">Ежедневный трекер</p>
+        <h1 id="page-title">Ваш день<br><em>в равновесии.</em></h1>
+        <p class="hero-copy">Считайте пищевую ценность, фиксируйте движение и наблюдайте за балансом — спокойно, точно, без лишнего шума.</p>
       </div>
       <div class="date-card">
-        <label for="active-date">Ð Ð°Ð±Ð¾Ñ‡Ð°Ñ Ð´Ð°Ñ‚Ð°</label>
+        <label for="active-date">Рабочая дата</label>
         <input id="active-date" type="date">
-        <span id="date-caption">Ð¡ÐµÐ³Ð¾Ð´Ð½Ñ</span>
+        <span id="date-caption">Сегодня</span>
       </div>
     </section>
 
     <section class="balance-card" aria-labelledby="balance-title">
       <div class="balance-copy">
-        <p class="eyebrow">Ð˜Ñ‚Ð¾Ð³ Ð´Ð½Ñ</p>
-        <h2 id="balance-title">Ð­Ð½ÐµÑ€Ð³ÐµÑ‚Ð¸Ñ‡ÐµÑÐºÐ¸Ð¹ Ð±Ð°Ð»Ð°Ð½Ñ</h2>
-        <p id="balance-status" class="balance-status neutral">Ð‘Ð°Ð»Ð°Ð½Ñ <strong>0</strong> ÐºÐºÐ°Ð»</p>
-        <p class="muted">ÐŸÐ¾Ñ‚Ñ€ÐµÐ±Ð»ÐµÐ½Ð¾ Ð¼Ð¸Ð½ÑƒÑ Ð·Ð°Ñ‚Ñ€Ð°Ñ‡ÐµÐ½Ð¾</p>
+        <p class="eyebrow">Итог дня</p>
+        <h2 id="balance-title">Энергетический баланс</h2>
+        <p id="balance-status" class="balance-status neutral">Баланс <strong>0</strong> ккал</p>
+        <p class="muted">Потреблено минус затрачено</p>
       </div>
       <div class="gauge-wrap" aria-hidden="true">
         <div class="gauge" id="balance-gauge"><span class="gauge-needle"></span><i></i></div>
-        <div class="gauge-labels"><span>Ð”ÐµÑ„Ð¸Ñ†Ð¸Ñ‚</span><span>ÐŸÑ€Ð¾Ñ„Ð¸Ñ†Ð¸Ñ‚</span></div>
+        <div class="gauge-labels"><span>Дефицит</span><span>Профицит</span></div>
       </div>
       <div class="balance-stats">
-        <div><span class="stat-dot coral"></span><p>ÐŸÐ¸Ñ‚Ð°Ð½Ð¸Ðµ</p><strong><span id="balance-menu">0</span> <small>ÐºÐºÐ°Ð»</small></strong></div>
-        <div><span class="stat-dot green"></span><p>ÐÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</p><strong><span id="balance-activity">0</span> <small>ÐºÐºÐ°Ð»</small></strong></div>
+        <div><span class="stat-dot coral"></span><p>Питание</p><strong><span id="balance-menu">0</span> <small>ккал</small></strong></div>
+        <div><span class="stat-dot green"></span><p>Активность</p><strong><span id="balance-activity">0</span> <small>ккал</small></strong></div>
       </div>
-      <button class="text-button" id="chart-button" type="button">ÐžÑ‚ÐºÑ€Ñ‹Ñ‚ÑŒ Ð´Ð¸Ð½Ð°Ð¼Ð¸ÐºÑƒ <span aria-hidden="true">â†—</span></button>
+      <button class="text-button" id="chart-button" type="button">Открыть динамику <span aria-hidden="true">↗</span></button>
     </section>
 
     <section class="water-card" aria-labelledby="water-title">
       <div class="water-heading">
         <div>
-          <p class="eyebrow">Ð“Ð¸Ð´Ñ€Ð°Ñ‚Ð°Ñ†Ð¸Ñ</p>
-          <h2 id="water-title">Ð¢Ñ€ÐµÐºÐµÑ€ Ð²Ð¾Ð´Ñ‹</h2>
-          <p id="water-progress-caption" class="muted">0 Ð¼Ð» Â· ÑƒÐºÐ°Ð¶Ð¸Ñ‚Ðµ Ð´Ð½ÐµÐ²Ð½ÑƒÑŽ Ð½Ð¾Ñ€Ð¼Ñƒ</p>
+          <p class="eyebrow">Гидратация</p>
+          <h2 id="water-title">Трекер воды</h2>
+          <p id="water-progress-caption" class="muted">0 мл · укажите дневную норму</p>
         </div>
-        <button class="button button-danger" id="water-reset" type="button">ÐžÐ±Ð½ÑƒÐ»Ð¸Ñ‚ÑŒ Ð²Ð¾Ð´Ñƒ</button>
+        <button class="button button-danger" id="water-reset" type="button">Обнулить воду</button>
       </div>
 
       <div class="water-layout">
         <div class="bottle-scale">
-          <span class="bottle-scale-top" id="water-goal-label">ÐÐ¾Ñ€Ð¼Ð°</span>
-          <div class="water-bottle" id="water-bottle" role="meter" aria-label="Ð’Ñ‹Ð¿Ð¸Ñ‚Ð¾ Ð²Ð¾Ð´Ñ‹" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0">
+          <span class="bottle-scale-top" id="water-goal-label">Норма</span>
+          <div class="water-bottle" id="water-bottle" role="meter" aria-label="Выпито воды" aria-valuemin="0" aria-valuenow="0" aria-valuemax="0">
             <span class="bottle-cap" aria-hidden="true"></span>
             <span class="bottle-neck" aria-hidden="true"></span>
             <span class="bottle-body" aria-hidden="true">
@@ -83,21 +83,21 @@
               <span class="bottle-shine"></span>
             </span>
           </div>
-          <span class="bottle-scale-bottom">0 Ð¼Ð»</span>
-          <span class="water-current-label" id="water-current-label"><strong id="water-current-value">0 Ð¼Ð»</strong></span>
+          <span class="bottle-scale-bottom">0 мл</span>
+          <span class="water-current-label" id="water-current-label"><strong id="water-current-value">0 мл</strong></span>
         </div>
 
         <div class="water-controls">
-          <label><span>Ð”Ð½ÐµÐ²Ð½Ð°Ñ Ð½Ð¾Ñ€Ð¼Ð°</span><span class="input-unit"><input id="water-goal" inputmode="numeric" min="1" step="1" placeholder="ÐÐ°Ð¿Ñ€Ð¸Ð¼ÐµÑ€, 2000"><small>Ð¼Ð»</small></span></label>
-          <label><span>Ð’Ñ‹Ð¿Ð¸Ñ‚Ð¾ ÑÐµÐ¹Ñ‡Ð°Ñ</span><span class="input-unit"><input id="water-amount" inputmode="numeric" min="1" step="1" placeholder="ÐÐ°Ð¿Ñ€Ð¸Ð¼ÐµÑ€, 250"><small>Ð¼Ð»</small></span></label>
-          <button class="button button-primary button-wide" id="water-add" type="button">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð²Ð¾Ð´Ñƒ</button>
-          <p class="water-hint">ÐÐ¾Ñ€Ð¼Ð° ÑÐ¾Ñ…Ñ€Ð°Ð½ÑÐµÑ‚ÑÑ Ð´Ð»Ñ ÑÐ»ÐµÐ´ÑƒÑŽÑ‰Ð¸Ñ… Ð´Ð½ÐµÐ¹. Ð’Ñ‹Ð¿Ð¸Ñ‚Ñ‹Ð¹ Ð¾Ð±ÑŠÑ‘Ð¼ Ð²ÐµÐ´Ñ‘Ñ‚ÑÑ Ð¾Ñ‚Ð´ÐµÐ»ÑŒÐ½Ð¾ Ð´Ð»Ñ ÐºÐ°Ð¶Ð´Ð¾Ð¹ Ð´Ð°Ñ‚Ñ‹.</p>
+          <label><span>Дневная норма</span><span class="input-unit"><input id="water-goal" inputmode="numeric" min="1" step="1" placeholder="Например, 2000"><small>мл</small></span></label>
+          <label><span>Выпито сейчас</span><span class="input-unit"><input id="water-amount" inputmode="numeric" min="1" step="1" placeholder="Например, 250"><small>мл</small></span></label>
+          <button class="button button-primary button-wide" id="water-add" type="button">Добавить воду</button>
+          <p class="water-hint">Норма сохраняется для следующих дней. Выпитый объём ведётся отдельно для каждой даты.</p>
         </div>
 
         <div class="water-overage" id="water-overage" hidden>
-          <p class="eyebrow">Ð¡Ð²ÐµÑ€Ñ… Ð½Ð¾Ñ€Ð¼Ñ‹</p>
-          <div class="water-glasses" id="water-glasses" aria-label="Ð”Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð°Ñ Ð²Ð¾Ð´Ð°"></div>
-          <small>ÐžÐ´Ð¸Ð½ ÑÑ‚Ð°ÐºÐ°Ð½ â€” ÐºÐ°Ð¶Ð´Ñ‹Ðµ Ð´Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ðµ 250 Ð¼Ð»</small>
+          <p class="eyebrow">Сверх нормы</p>
+          <div class="water-glasses" id="water-glasses" aria-label="Дополнительная вода"></div>
+          <small>Один стакан — каждые дополнительные 250 мл</small>
         </div>
       </div>
     </section>
@@ -106,71 +106,71 @@
       <section class="calculator-card nutrition" aria-labelledby="nutrition-title">
         <div class="section-heading">
           <div>
-            <p class="section-number">01 / ÐŸÐ¸Ñ‚Ð°Ð½Ð¸Ðµ</p>
-            <h2 id="nutrition-title">ÐšÐ°Ð»ÑŒÐºÑƒÐ»ÑÑ‚Ð¾Ñ€ Ð¿Ð¾Ñ€Ñ†Ð¸Ð¸</h2>
+            <p class="section-number">01 / Питание</p>
+            <h2 id="nutrition-title">Калькулятор порции</h2>
           </div>
-          <p>Ð—Ð½Ð°Ñ‡ÐµÐ½Ð¸Ñ Ð½Ð° 100 Ð³</p>
+          <p>Значения на 100 г</p>
         </div>
 
         <form id="nutrition-form" novalidate>
           <div class="field-grid nutrition-fields">
-            <label><span>ÐšÐ°Ð»Ð¾Ñ€Ð¸Ð¹Ð½Ð¾ÑÑ‚ÑŒ</span><span class="input-unit"><input id="food-calories" inputmode="decimal" min="0" step="any" required><small>ÐºÐºÐ°Ð»</small></span></label>
-            <label><span>Ð‘ÐµÐ»ÐºÐ¸</span><span class="input-unit"><input id="food-proteins" inputmode="decimal" min="0" step="any" required><small>Ð³</small></span></label>
-            <label><span>Ð–Ð¸Ñ€Ñ‹</span><span class="input-unit"><input id="food-fats" inputmode="decimal" min="0" step="any" required><small>Ð³</small></span></label>
-            <label><span>Ð£Ð³Ð»ÐµÐ²Ð¾Ð´Ñ‹</span><span class="input-unit"><input id="food-carbs" inputmode="decimal" min="0" step="any" required><small>Ð³</small></span></label>
-            <label class="portion-field"><span>Ð Ð°Ð·Ð¼ÐµÑ€ Ð¿Ð¾Ñ€Ñ†Ð¸Ð¸</span><span class="input-unit"><input id="food-portion" inputmode="decimal" min="0.01" step="any" required><small>Ð³</small></span></label>
+            <label><span>Калорийность</span><span class="input-unit"><input id="food-calories" inputmode="decimal" min="0" step="any" required><small>ккал</small></span></label>
+            <label><span>Белки</span><span class="input-unit"><input id="food-proteins" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label><span>Жиры</span><span class="input-unit"><input id="food-fats" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label><span>Углеводы</span><span class="input-unit"><input id="food-carbs" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label class="portion-field"><span>Размер порции</span><span class="input-unit"><input id="food-portion" inputmode="decimal" min="0.01" step="any" required><small>г</small></span></label>
           </div>
           <div class="form-actions">
-            <button class="button button-primary" type="submit">Ð Ð°ÑÑÑ‡Ð¸Ñ‚Ð°Ñ‚ÑŒ</button>
-            <button class="button button-accent" id="nutrition-add" type="button">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð² Ð´ÐµÐ½ÑŒ</button>
-            <button class="button button-link" id="nutrition-reset" type="reset">ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚ÑŒ</button>
+            <button class="button button-primary" type="submit">Рассчитать</button>
+            <button class="button button-accent" id="nutrition-add" type="button">Добавить в день</button>
+            <button class="button button-link" id="nutrition-reset" type="reset">Очистить</button>
           </div>
         </form>
 
         <div class="result-strip" aria-live="polite">
-          <p>Ð’ Ð¿Ð¾Ñ€Ñ†Ð¸Ð¸</p>
-          <div><span>ÐšÐ°Ð»Ð¾Ñ€Ð¸Ð¸</span><strong id="result-calories">â€”</strong><small>ÐºÐºÐ°Ð»</small></div>
-          <div><span>Ð‘ÐµÐ»ÐºÐ¸</span><strong id="result-proteins">â€”</strong><small>Ð³</small></div>
-          <div><span>Ð–Ð¸Ñ€Ñ‹</span><strong id="result-fats">â€”</strong><small>Ð³</small></div>
-          <div><span>Ð£Ð³Ð»ÐµÐ²Ð¾Ð´Ñ‹</span><strong id="result-carbs">â€”</strong><small>Ð³</small></div>
+          <p>В порции</p>
+          <div><span>Калории</span><strong id="result-calories">—</strong><small>ккал</small></div>
+          <div><span>Белки</span><strong id="result-proteins">—</strong><small>г</small></div>
+          <div><span>Жиры</span><strong id="result-fats">—</strong><small>г</small></div>
+          <div><span>Углеводы</span><strong id="result-carbs">—</strong><small>г</small></div>
         </div>
 
         <section class="codex-chat" aria-labelledby="codex-chat-title">
           <div class="codex-chat-heading">
             <div>
-              <p class="eyebrow">ÐŸÐ¾Ð¼Ð¾Ñ‰Ð½Ð¸Ðº Ð¿Ñ€Ð¾ÐµÐºÑ‚Ð°</p>
-              <h3 id="codex-chat-title">Ð¡Ð¿Ñ€Ð¾ÑÐ¸Ñ‚ÑŒ Codex</h3>
+              <p class="eyebrow">Помощник проекта</p>
+              <h3 id="codex-chat-title">Спросить Codex</h3>
             </div>
-            <span class="codex-chat-status" id="codex-chat-status">ÐžÑ‡ÐµÑ€ÐµÐ´ÑŒ Google Drive</span>
+            <span class="codex-chat-status" id="codex-chat-status">Очередь Google Drive</span>
           </div>
           <form id="codex-chat-form">
-            <label for="codex-chat-input">Ð’Ð°Ñˆ Ð²Ð¾Ð¿Ñ€Ð¾Ñ</label>
-            <textarea id="codex-chat-input" maxlength="1000" rows="4" placeholder="ÐÐ°Ð¿Ñ€Ð¸Ð¼ÐµÑ€: ÐºÐ°Ðº Ñ€Ð°ÑÑÑ‡Ð¸Ñ‚Ñ‹Ð²Ð°ÐµÑ‚ÑÑ Ñ€Ð°ÑÑ…Ð¾Ð´ ÐºÐ°Ð»Ð¾Ñ€Ð¸Ð¹?" required></textarea>
+            <label for="codex-chat-input">Ваш вопрос</label>
+            <textarea id="codex-chat-input" maxlength="1000" rows="4" placeholder="Например: как рассчитывается расход калорий?" required></textarea>
             <div class="codex-chat-actions">
-              <small>ÐžÑ‚Ð²ÐµÑ‚ Ð¿Ð¾ÑÐ²Ð¸Ñ‚ÑÑ Ð¿Ð¾ÑÐ»Ðµ Ð¾Ð±Ñ€Ð°Ð±Ð¾Ñ‚ÐºÐ¸ Ð²Ð¾Ð¿Ñ€Ð¾ÑÐ° Ð¿Ñ€Ð¾Ð³Ñ€Ð°Ð¼Ð¼Ð¾Ð¹ Codex Ð½Ð° ÐºÐ¾Ð¼Ð¿ÑŒÑŽÑ‚ÐµÑ€Ðµ Ð²Ð»Ð°Ð´ÐµÐ»ÑŒÑ†Ð°. ÐžÐ±Ñ‹Ñ‡Ð½Ð¾ ÑÑ‚Ð¾ Ð·Ð°Ð½Ð¸Ð¼Ð°ÐµÑ‚ Ð¾Ñ‚ Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¸Ñ… ÑÐµÐºÑƒÐ½Ð´ Ð´Ð¾ Ð½ÐµÑÐºÐ¾Ð»ÑŒÐºÐ¸Ñ… Ð¼Ð¸Ð½ÑƒÑ‚.</small>
-              <button class="button button-primary" id="codex-chat-send" type="submit">ÐžÑ‚Ð¿Ñ€Ð°Ð²Ð¸Ñ‚ÑŒ</button>
+              <small>Ответ появится после обработки вопроса программой Codex на компьютере владельца. Обычно это занимает от нескольких секунд до нескольких минут.</small>
+              <button class="button button-primary" id="codex-chat-send" type="submit">Отправить</button>
             </div>
           </form>
           <div class="codex-chat-output" id="codex-chat-output" role="status" aria-live="polite">
-            <span>ÐžÑ‚Ð²ÐµÑ‚ Ð¿Ð¾ÑÐ²Ð¸Ñ‚ÑÑ Ð·Ð´ÐµÑÑŒ.</span>
+            <span>Ответ появится здесь.</span>
           </div>
         </section>
 
         <div class="daily-block">
-          <div class="daily-heading"><div><p class="eyebrow">ÐÐ°ÐºÐ¾Ð¿Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾</p><h3>Ð”Ð½ÐµÐ²Ð½Ð¾Ðµ Ð¼ÐµÐ½ÑŽ</h3></div><span id="menu-save-state">ÐÐµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¾</span></div>
+          <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневное меню</h3></div><span id="menu-save-state">Не сохранено</span></div>
           <div class="metric-grid">
-            <div><span>ÐšÐ°Ð»Ð¾Ñ€Ð¸Ð¸</span><strong id="daily-calories">0</strong><small>ÐºÐºÐ°Ð»</small></div>
-            <div><span>Ð‘ÐµÐ»ÐºÐ¸</span><strong id="daily-proteins">0</strong><small>Ð³</small></div>
-            <div><span>Ð–Ð¸Ñ€Ñ‹</span><strong id="daily-fats">0</strong><small>Ð³</small></div>
-            <div><span>Ð£Ð³Ð»ÐµÐ²Ð¾Ð´Ñ‹</span><strong id="daily-carbs">0</strong><small>Ð³</small></div>
+            <div><span>Калории</span><strong id="daily-calories">0</strong><small>ккал</small></div>
+            <div><span>Белки</span><strong id="daily-proteins">0</strong><small>г</small></div>
+            <div><span>Жиры</span><strong id="daily-fats">0</strong><small>г</small></div>
+            <div><span>Углеводы</span><strong id="daily-carbs">0</strong><small>г</small></div>
           </div>
           <div class="manual-row">
-            <label><span>Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ ÐºÐ°Ð»Ð¾Ñ€Ð¸Ð¸ Ð²Ñ€ÑƒÑ‡Ð½ÑƒÑŽ</span><span class="input-unit compact"><input id="manual-menu" inputmode="decimal" min="0" step="any"><small>ÐºÐºÐ°Ð»</small></span></label>
-            <button class="button button-small button-ghost" id="manual-menu-add" type="button">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ</button>
+            <label><span>Добавить калории вручную</span><span class="input-unit compact"><input id="manual-menu" inputmode="decimal" min="0" step="any"><small>ккал</small></span></label>
+            <button class="button button-small button-ghost" id="manual-menu-add" type="button">Добавить</button>
           </div>
           <div class="daily-actions">
-            <button class="button button-dark" id="save-menu" type="button">Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð¼ÐµÐ½ÑŽ</button>
-            <button class="button button-ghost" id="clear-menu-screen" type="button">ÐžÐ±Ð½ÑƒÐ»Ð¸Ñ‚ÑŒ Ð½Ð° ÑÐºÑ€Ð°Ð½Ðµ</button>
+            <button class="button button-dark" id="save-menu" type="button">Сохранить меню</button>
+            <button class="button button-ghost" id="clear-menu-screen" type="button">Обнулить на экране</button>
           </div>
         </div>
       </section>
@@ -178,111 +178,110 @@
       <section class="calculator-card activity" aria-labelledby="activity-title">
         <div class="section-heading">
           <div>
-            <p class="section-number">02 / ÐÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</p>
-            <h2 id="activity-title">Ð Ð°ÑÑ…Ð¾Ð´ ÑÐ½ÐµÑ€Ð³Ð¸Ð¸</h2>
+            <p class="section-number">02 / Активность</p>
+            <h2 id="activity-title">Расход энергии</h2>
           </div>
-          <p id="profile-summary">Ð—Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ Ð¿Ñ€Ð¾Ñ„Ð¸Ð»ÑŒ</p>
+          <p id="profile-summary">Заполните профиль</p>
         </div>
 
         <div class="activity-list">
           <article class="activity-row">
-            <div class="activity-icon" aria-hidden="true">â˜¾</div>
-            <div class="activity-name"><h3>Ð¡Ð¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ Ð¿Ð¾ÐºÐ¾Ñ</h3><p>Ð‘Ð°Ð·Ð¾Ð²Ñ‹Ð¹ Ð¾Ð±Ð¼ÐµÐ½ Ð·Ð° Ð¿ÐµÑ€Ð¸Ð¾Ð´</p></div>
+            <div class="activity-icon" aria-hidden="true">☾</div>
+            <div class="activity-name"><h3>Состояние покоя</h3><p>Базовый обмен за период</p></div>
             <div class="inline-fields">
-              <label><span class="sr-only">Ð§Ð°ÑÑ‹</span><input id="rest-hours" inputmode="decimal" min="0" step="any" placeholder="0"><small>Ñ‡</small></label>
-              <label><span class="sr-only">ÐœÐ¸Ð½ÑƒÑ‚Ñ‹</span><input id="rest-minutes" inputmode="numeric" min="0" max="59" step="1" placeholder="00"><small>Ð¼Ð¸Ð½</small></label>
+              <label><span class="sr-only">Часы</span><input id="rest-hours" inputmode="decimal" min="0" step="any" placeholder="0"><small>ч</small></label>
+              <label><span class="sr-only">Минуты</span><input id="rest-minutes" inputmode="numeric" min="0" max="59" step="1" placeholder="00"><small>мин</small></label>
             </div>
-            <button class="round-button" data-calculate="rest" type="button" aria-label="Ð Ð°ÑÑÑ‡Ð¸Ñ‚Ð°Ñ‚ÑŒ ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ Ð¿Ð¾ÐºÐ¾Ñ">â†’</button>
-            <output id="rest-result"><strong>â€”</strong><small>ÐºÐºÐ°Ð»</small></output>
+            <button class="round-button" data-calculate="rest" type="button" aria-label="Рассчитать состояние покоя">→</button>
+            <output id="rest-result"><strong>—</strong><small>ккал</small></output>
           </article>
 
           <article class="activity-row">
-            <div class="activity-icon" aria-hidden="true">â†Ÿ</div>
-            <div class="activity-name"><h3>Ð¨Ð°Ð³Ð¸</h3><p>Ð¥Ð¾Ð´ÑŒÐ±Ð° Ð² Ñ‚ÐµÑ‡ÐµÐ½Ð¸Ðµ Ð´Ð½Ñ</p></div>
+            <div class="activity-icon" aria-hidden="true">↟</div>
+            <div class="activity-name"><h3>Шаги</h3><p>Ходьба в течение дня</p></div>
             <div class="inline-fields single">
-              <label><span class="sr-only">ÐšÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ ÑˆÐ°Ð³Ð¾Ð²</span><input id="steps" inputmode="numeric" min="1" step="1" placeholder="0"><small>ÑˆÐ°Ð³Ð¾Ð²</small></label>
+              <label><span class="sr-only">Количество шагов</span><input id="steps" inputmode="numeric" min="1" step="1" placeholder="0"><small>шагов</small></label>
             </div>
-            <button class="round-button" data-calculate="steps" type="button" aria-label="Ð Ð°ÑÑÑ‡Ð¸Ñ‚Ð°Ñ‚ÑŒ ÑˆÐ°Ð³Ð¸">â†’</button>
-            <output id="steps-result"><strong>â€”</strong><small>ÐºÐºÐ°Ð»</small></output>
+            <button class="round-button" data-calculate="steps" type="button" aria-label="Рассчитать шаги">→</button>
+            <output id="steps-result"><strong>—</strong><small>ккал</small></output>
           </article>
 
           <article class="activity-row">
-            <div class="activity-icon" aria-hidden="true">âŒ</div>
-            <div class="activity-name"><h3>ÐšÐ°Ñ€Ð´Ð¸Ð¾</h3><p>ÐÑÑ€Ð¾Ð±Ð½Ð°Ñ Ð½Ð°Ð³Ñ€ÑƒÐ·ÐºÐ°</p></div>
+            <div class="activity-icon" aria-hidden="true">⌁</div>
+            <div class="activity-name"><h3>Кардио</h3><p>Аэробная нагрузка</p></div>
             <div class="inline-fields sport-fields">
-              <label><span class="sr-only">ÐœÐ¸Ð½ÑƒÑ‚Ñ‹ ÐºÐ°Ñ€Ð´Ð¸Ð¾</span><input id="cardio-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>Ð¼Ð¸Ð½</small></label>
-              <label><span class="sr-only">Ð˜Ð½Ñ‚ÐµÐ½ÑÐ¸Ð²Ð½Ð¾ÑÑ‚ÑŒ ÐºÐ°Ñ€Ð´Ð¸Ð¾</span><select id="cardio-intensity"><option>Ð›Ñ‘Ð³ÐºÐ°Ñ</option><option selected>Ð£Ð¼ÐµÑ€ÐµÐ½Ð½Ð°Ñ</option><option>Ð’Ñ‹ÑÐ¾ÐºÐ°Ñ</option></select></label>
+              <label><span class="sr-only">Минуты кардио</span><input id="cardio-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>мин</small></label>
+              <label><span class="sr-only">Интенсивность кардио</span><select id="cardio-intensity"><option>Лёгкая</option><option selected>Умеренная</option><option>Высокая</option></select></label>
             </div>
-            <button class="round-button" data-calculate="cardio" type="button" aria-label="Ð Ð°ÑÑÑ‡Ð¸Ñ‚Ð°Ñ‚ÑŒ ÐºÐ°Ñ€Ð´Ð¸Ð¾">â†’</button>
-            <output id="cardio-result"><strong>â€”</strong><small>ÐºÐºÐ°Ð»</small></output>
+            <button class="round-button" data-calculate="cardio" type="button" aria-label="Рассчитать кардио">→</button>
+            <output id="cardio-result"><strong>—</strong><small>ккал</small></output>
           </article>
 
           <article class="activity-row">
-            <div class="activity-icon" aria-hidden="true">â—†</div>
-            <div class="activity-name"><h3>Ð¡Ð¸Ð»Ð¾Ð²Ñ‹Ðµ</h3><p>Ð Ð°Ð±Ð¾Ñ‚Ð° Ñ Ð½Ð°Ð³Ñ€ÑƒÐ·ÐºÐ¾Ð¹</p></div>
+            <div class="activity-icon" aria-hidden="true">◆</div>
+            <div class="activity-name"><h3>Силовые</h3><p>Работа с нагрузкой</p></div>
             <div class="inline-fields sport-fields">
-              <label><span class="sr-only">ÐœÐ¸Ð½ÑƒÑ‚Ñ‹ ÑÐ¸Ð»Ð¾Ð²Ð¾Ð¹ Ñ‚Ñ€ÐµÐ½Ð¸Ñ€Ð¾Ð²ÐºÐ¸</span><input id="strength-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>Ð¼Ð¸Ð½</small></label>
-              <label><span class="sr-only">Ð˜Ð½Ñ‚ÐµÐ½ÑÐ¸Ð²Ð½Ð¾ÑÑ‚ÑŒ ÑÐ¸Ð»Ð¾Ð²Ð¾Ð¹ Ñ‚Ñ€ÐµÐ½Ð¸Ñ€Ð¾Ð²ÐºÐ¸</span><select id="strength-intensity"><option>Ð›Ñ‘Ð³ÐºÐ°Ñ</option><option selected>Ð£Ð¼ÐµÑ€ÐµÐ½Ð½Ð°Ñ</option><option>Ð’Ñ‹ÑÐ¾ÐºÐ°Ñ</option></select></label>
+              <label><span class="sr-only">Минуты силовой тренировки</span><input id="strength-minutes" inputmode="decimal" min="0" step="any" placeholder="0"><small>мин</small></label>
+              <label><span class="sr-only">Интенсивность силовой тренировки</span><select id="strength-intensity"><option>Лёгкая</option><option selected>Умеренная</option><option>Высокая</option></select></label>
             </div>
-            <button class="round-button" data-calculate="strength" type="button" aria-label="Ð Ð°ÑÑÑ‡Ð¸Ñ‚Ð°Ñ‚ÑŒ ÑÐ¸Ð»Ð¾Ð²Ñ‹Ðµ">â†’</button>
-            <output id="strength-result"><strong>â€”</strong><small>ÐºÐºÐ°Ð»</small></output>
+            <button class="round-button" data-calculate="strength" type="button" aria-label="Рассчитать силовые">→</button>
+            <output id="strength-result"><strong>—</strong><small>ккал</small></output>
           </article>
         </div>
 
         <div class="form-actions activity-actions">
-          <button class="button button-accent" id="activity-add" type="button">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ Ð·Ð°Ð¿Ð¾Ð»Ð½ÐµÐ½Ð½Ð¾Ðµ Ð² Ð´ÐµÐ½ÑŒ</button>
-          <button class="button button-link" id="activity-reset" type="button">ÐžÑ‡Ð¸ÑÑ‚Ð¸Ñ‚ÑŒ Ð²Ð²Ð¾Ð´</button>
+          <button class="button button-accent" id="activity-add" type="button">Добавить заполненное в день</button>
+          <button class="button button-link" id="activity-reset" type="button">Очистить ввод</button>
         </div>
 
         <div class="daily-block activity-daily">
-          <div class="daily-heading"><div><p class="eyebrow">ÐÐ°ÐºÐ¾Ð¿Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ð¾</p><h3>Ð”Ð½ÐµÐ²Ð½Ð°Ñ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</h3></div><span id="activity-save-state">ÐÐµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¾</span></div>
-          <div class="activity-total"><span>Ð’ÑÐµÐ³Ð¾ Ð·Ð°Ñ‚Ñ€Ð°Ñ‡ÐµÐ½Ð¾</span><strong id="daily-activity">0</strong><small>ÐºÐºÐ°Ð»</small></div>
+          <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневная активность</h3></div><span id="activity-save-state">Не сохранено</span></div>
+          <div class="activity-total"><span>Всего затрачено</span><strong id="daily-activity">0</strong><small>ккал</small></div>
           <div class="manual-row">
-            <label><span>Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ ÑÐ½ÐµÑ€Ð³Ð¾Ð·Ð°Ñ‚Ñ€Ð°Ñ‚Ñ‹ Ð²Ñ€ÑƒÑ‡Ð½ÑƒÑŽ</span><span class="input-unit compact"><input id="manual-activity" inputmode="decimal" min="0" step="any"><small>ÐºÐºÐ°Ð»</small></span></label>
-            <button class="button button-small button-ghost" id="manual-activity-add" type="button">Ð”Ð¾Ð±Ð°Ð²Ð¸Ñ‚ÑŒ</button>
+            <label><span>Добавить энергозатраты вручную</span><span class="input-unit compact"><input id="manual-activity" inputmode="decimal" min="0" step="any"><small>ккал</small></span></label>
+            <button class="button button-small button-ghost" id="manual-activity-add" type="button">Добавить</button>
           </div>
           <div class="daily-actions">
-            <button class="button button-dark" id="save-activity" type="button">Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ</button>
-            <button class="button button-ghost" id="clear-activity-screen" type="button">ÐžÐ±Ð½ÑƒÐ»Ð¸Ñ‚ÑŒ Ð½Ð° ÑÐºÑ€Ð°Ð½Ðµ</button>
+            <button class="button button-dark" id="save-activity" type="button">Сохранить активность</button>
+            <button class="button button-ghost" id="clear-activity-screen" type="button">Обнулить на экране</button>
           </div>
         </div>
       </section>
     </div>
   </main>
 
-  <footer><p>Ð”Ð°Ð½Ð½Ñ‹Ðµ Ñ…Ñ€Ð°Ð½ÑÑ‚ÑÑ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð²Ð°ÑˆÐµÐ¼ Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ.</p><button class="text-button" id="export-all-button" type="button">Ð¡ÐºÐ°Ñ‡Ð°Ñ‚ÑŒ Ð²ÐµÑÑŒ Ð°Ñ€Ñ…Ð¸Ð² â†’</button></footer>
+  <footer><p>Данные хранятся только в вашем браузере.</p><button class="text-button" id="export-all-button" type="button">Скачать весь архив →</button></footer>
 
   <dialog id="profile-dialog">
     <form id="profile-form" method="dialog">
-      <button class="dialog-close" type="button" data-close="profile-dialog" aria-label="Ð—Ð°ÐºÑ€Ñ‹Ñ‚ÑŒ">Ã—</button>
-      <p class="eyebrow">ÐŸÐµÑ€ÐµÐ´ Ð½Ð°Ñ‡Ð°Ð»Ð¾Ð¼</p>
-      <h2>Ð Ð°ÑÑÐºÐ°Ð¶Ð¸Ñ‚Ðµ Ð½ÐµÐ¼Ð½Ð¾Ð³Ð¾ Ð¾ ÑÐµÐ±Ðµ</h2>
-      <p class="muted">Ð­Ñ‚Ð¸ Ð´Ð°Ð½Ð½Ñ‹Ðµ Ð½ÑƒÐ¶Ð½Ñ‹ Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð´Ð»Ñ Ñ€Ð°ÑÑ‡Ñ‘Ñ‚Ð° ÑÐ½ÐµÑ€Ð³Ð¾Ð·Ð°Ñ‚Ñ€Ð°Ñ‚.</p>
-      <fieldset class="profile-choice"><legend>ÐŸÑ€Ð¾Ñ„Ð¸Ð»ÑŒ</legend><label class="radio-card"><input type="radio" name="profile-mode" value="Eni"><span><strong>Eni</strong><small>ÐœÑƒÐ¶Ñ‡Ð¸Ð½Ð° Â· 83 ÐºÐ³ Â· 178 ÑÐ¼ Â· 32 Ð³Ð¾Ð´Ð°</small></span></label><label class="radio-card"><input type="radio" name="profile-mode" value="Ð‘ÑƒÑÐ¸Ð½ÐºÐ°"><span><strong>Ð‘ÑƒÑÐ¸Ð½ÐºÐ°</strong><small>Ð–ÐµÐ½Ñ‰Ð¸Ð½Ð° Â· 63 ÐºÐ³ Â· 174 ÑÐ¼ Â· 35 Ð»ÐµÑ‚</small></span></label><label class="radio-card"><input type="radio" name="profile-mode" value="manual" checked><span><strong>Ð’Ñ€ÑƒÑ‡Ð½ÑƒÑŽ</strong><small>Ð¡Ð²Ð¾Ð¸ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ñ‹</small></span></label></fieldset>
+      <button class="dialog-close" type="button" data-close="profile-dialog" aria-label="Закрыть">×</button>
+      <p class="eyebrow">Перед началом</p>
+      <h2>Расскажите немного о себе</h2>
+      <p class="muted">Эти данные нужны только для расчёта энергозатрат.</p>
+      <fieldset class="profile-choice"><legend>Профиль</legend><label class="radio-card"><input type="radio" name="profile-mode" value="Eni"><span><strong>Eni</strong><small>Мужчина · 83 кг · 178 см · 32 года</small></span></label><label class="radio-card"><input type="radio" name="profile-mode" value="Бусинка"><span><strong>Бусинка</strong><small>Женщина · 63 кг · 174 см · 35 лет</small></span></label><label class="radio-card"><input type="radio" name="profile-mode" value="manual" checked><span><strong>Вручную</strong><small>Свои параметры</small></span></label></fieldset>
       <div id="manual-profile-fields">
-        <fieldset><legend>ÐŸÐ¾Ð»</legend><label class="radio-card"><input type="radio" name="gender" value="male" required><span>ÐœÑƒÐ¶Ñ‡Ð¸Ð½Ð°</span></label><label class="radio-card"><input type="radio" name="gender" value="female" required><span>Ð–ÐµÐ½Ñ‰Ð¸Ð½Ð°</span></label></fieldset>
+        <fieldset><legend>Пол</legend><label class="radio-card"><input type="radio" name="gender" value="male" required><span>Мужчина</span></label><label class="radio-card"><input type="radio" name="gender" value="female" required><span>Женщина</span></label></fieldset>
         <div class="profile-fields">
-        <label><span>Ð’ÐµÑ</span><span class="input-unit"><input id="profile-weight" inputmode="decimal" min="1" step="any" required><small>ÐºÐ³</small></span></label>
-        <label><span>Ð Ð¾ÑÑ‚</span><span class="input-unit"><input id="profile-height" inputmode="decimal" min="1" step="any" required><small>ÑÐ¼</small></span></label>
-        <label><span>Ð’Ð¾Ð·Ñ€Ð°ÑÑ‚</span><span class="input-unit"><input id="profile-age" inputmode="numeric" min="1" step="1" required><small>Ð»ÐµÑ‚</small></span></label>
+        <label><span>Вес</span><span class="input-unit"><input id="profile-weight" inputmode="decimal" min="1" step="any" required><small>кг</small></span></label>
+        <label><span>Рост</span><span class="input-unit"><input id="profile-height" inputmode="decimal" min="1" step="any" required><small>см</small></span></label>
+        <label><span>Возраст</span><span class="input-unit"><input id="profile-age" inputmode="numeric" min="1" step="1" required><small>лет</small></span></label>
         </div>
       </div>
       <p class="form-error" id="profile-error" role="alert"></p>
-      <button class="button button-primary button-wide" type="submit">Ð¡Ð¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ð¿Ñ€Ð¾Ñ„Ð¸Ð»ÑŒ</button>
+      <button class="button button-primary button-wide" type="submit">Сохранить профиль</button>
     </form>
   </dialog>
 
   <dialog id="chart-dialog" class="chart-dialog">
-    <div class="chart-head"><div><p class="eyebrow">Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ</p><h2>Ð”Ð¸Ð½Ð°Ð¼Ð¸ÐºÐ° Ð±Ð°Ð»Ð°Ð½ÑÐ°</h2></div><button class="dialog-close" type="button" data-close="chart-dialog" aria-label="Ð—Ð°ÐºÑ€Ñ‹Ñ‚ÑŒ">Ã—</button></div>
+    <div class="chart-head"><div><p class="eyebrow">История</p><h2>Динамика баланса</h2></div><button class="dialog-close" type="button" data-close="chart-dialog" aria-label="Закрыть">×</button></div>
     <div class="chart-controls">
-      <label>ÐŸÐµÑ€Ð¸Ð¾Ð´ <select id="chart-period"><option value="7">1 Ð½ÐµÐ´ÐµÐ»Ñ</option><option value="30">1 Ð¼ÐµÑÑÑ†</option><option value="90">3 Ð¼ÐµÑÑÑ†Ð°</option><option value="180">6 Ð¼ÐµÑÑÑ†ÐµÐ²</option></select></label>
-      <p id="chart-total">Ð‘Ð°Ð»Ð°Ð½Ñ Ð·Ð° Ð¿ÐµÑ€Ð¸Ð¾Ð´: <strong>0 ÐºÐºÐ°Ð»</strong></p>
+      <label>Период <select id="chart-period"><option value="7">1 неделя</option><option value="30">1 месяц</option><option value="90">3 месяца</option><option value="180">6 месяцев</option></select></label>
+      <p id="chart-total">Баланс за период: <strong>0 ккал</strong></p>
     </div>
-    <div class="chart-canvas-wrap"><canvas id="balance-chart" width="900" height="420">Ð“Ñ€Ð°Ñ„Ð¸Ðº Ð±Ð°Ð»Ð°Ð½ÑÐ° ÐºÐ°Ð»Ð¾Ñ€Ð¸Ð¹</canvas></div>
-    <div class="chart-legend"><span><i class="green"></i>ÐŸÑ€Ð¾Ñ„Ð¸Ñ†Ð¸Ñ‚</span><span><i class="coral"></i>Ð”ÐµÑ„Ð¸Ñ†Ð¸Ñ‚</span></div>
+    <div class="chart-canvas-wrap"><canvas id="balance-chart" width="900" height="420">График баланса калорий</canvas></div>
+    <div class="chart-legend"><span><i class="green"></i>Профицит</span><span><i class="coral"></i>Дефицит</span></div>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
-
