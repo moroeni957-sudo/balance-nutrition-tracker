@@ -806,8 +806,6 @@ function bindEvents() {
   $("#save-activity").addEventListener("click", () => savePart("activity"));
   $("#clear-menu-screen").addEventListener("click", () => clearPart("menu", false));
   $("#clear-activity-screen").addEventListener("click", () => clearPart("activity", false));
-  $("#clear-menu-saved").addEventListener("click", () => clearPart("menu", true));
-  $("#clear-activity-saved").addEventListener("click", () => clearPart("activity", true));
 
   $("#active-date").addEventListener("change", async (event) => {
     const nextDate = event.target.value;
