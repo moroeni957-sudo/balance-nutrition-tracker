@@ -126,12 +126,23 @@ const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mill
 async function waitForQueueAnswer(endpoint, requestId, output) {
   const expiresAt = Date.now() + 15 * 60 * 1000;
   let attempts = 0;
+  let missingAttempts = 0;
   while (Date.now() < expiresAt) {
     await wait(attempts === 0 ? 2500 : 8000);
     attempts += 1;
     const data = await queueStatus(endpoint, requestId);
+    if (!data?.ok) throw new Error(data?.error || "Сервис очереди вернул ошибку.");
     if (data?.status === "completed" && typeof data.answer === "string") return data.answer.trim();
     if (data?.status === "failed") throw new Error(data.error || "Codex не смог подготовить ответ.");
+    if (data?.status === "missing") {
+      missingAttempts += 1;
+      if (missingAttempts >= 2) {
+        throw new Error("Вопрос не был сохранён на Google Drive. Попробуйте отправить его ещё раз.");
+      }
+      output.textContent = "Проверяем сохранение вопроса на Google Drive…";
+      continue;
+    }
+    missingAttempts = 0;
     output.textContent = data?.status === "processing"
       ? "Ваш ПК получил вопрос. Codex готовит ответ…"
       : "Вопрос сохранён на Google Drive и ждёт включённый локальный worker…";

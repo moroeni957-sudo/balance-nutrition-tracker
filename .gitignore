@@ -3,4 +3,5 @@ chat-worker/credentials.local.json
 chat-worker/token.local.json
 chat-worker/oauth-url.local.txt
 chat-worker/.answer-*.tmp
+chat-worker/worker.*.log
 .local-server*.log

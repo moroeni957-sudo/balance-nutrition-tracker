@@ -72,7 +72,7 @@ function getStatus_(requestId) {
     };
   }
   const questions = folder.getFilesByName(QUESTION_PREFIX + requestId + ".json");
-  if (!questions.hasNext()) return { ok: true, request_id: requestId, status: "pending" };
+  if (!questions.hasNext()) return { ok: true, request_id: requestId, status: "missing" };
   const question = JSON.parse(questions.next().getBlob().getDataAsString("UTF-8"));
   return { ok: true, request_id: requestId, status: question.status || "pending" };
 }
