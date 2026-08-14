@@ -1,2 +1,9 @@
 node_modules/
 .local-server*.log
+.github-publish/
+__pycache__/
+*.py[cod]
+food-data-sources/.argos-models/
+food-data-sources/.translation-runtime/
+food-data-sources/raw/
+График меню и активности/

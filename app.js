@@ -15,6 +15,19 @@ const MET = {
   strength: { "Лёгкая": 2, "Умеренная": 4, "Высокая": 6 },
 };
 const NUTRIENTS = ["calories", "proteins", "fats", "carbs"];
+const FOOD_COLUMNS = window.FOOD_DATABASE?.columns || [];
+const FOOD_CATALOG = (window.FOOD_DATABASE?.foods || []).map((row) => {
+  const food = Object.fromEntries(FOOD_COLUMNS.map((column, index) => [column, row[index]]));
+  const chickenAlias = /(^|\s)курин(?:ая|ое|ый|ые)(?=\s|,|$)/i.test(food.name) ? " курица" : "";
+  food.search = normalizedFoodSearch(`${food.name} ${food.original}${chickenAlias}`);
+  return food;
+});
+const FOOD_BY_LEVEL = Object.freeze({
+  all: FOOD_CATALOG,
+  1: FOOD_CATALOG.filter((food) => food.level === 1),
+  2: FOOD_CATALOG.filter((food) => food.level === 2),
+});
+const FOOD_PAGE_SIZE = 60;
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -38,6 +51,8 @@ let toastTimer;
 let driveAccessToken = null;
 let driveTokenClient = null;
 let driveAuthPromise = null;
+let foodCatalogState = { level: "all", group: "", subgroup: "", query: "", visible: FOOD_PAGE_SIZE };
+let foodSearchTimer;
 
 function readJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); }
@@ -258,6 +273,171 @@ function toast(message, isError = false) {
   toastTimer = setTimeout(() => node.classList.remove("visible"), 3200);
 }
 
+function normalizedFoodSearch(value) {
+  return String(value || "").toLocaleLowerCase("ru-RU").replaceAll("ё", "е").replace(/[^a-zа-я0-9]+/gi, " ").trim();
+}
+
+function foodLevelItems() {
+  return FOOD_BY_LEVEL[foodCatalogState.level] || FOOD_CATALOG;
+}
+
+function selectFoodBranch(group = "", subgroup = "") {
+  foodCatalogState.group = group;
+  foodCatalogState.subgroup = subgroup;
+  foodCatalogState.visible = FOOD_PAGE_SIZE;
+  renderFoodCatalog();
+}
+
+function renderFoodTree(items) {
+  const tree = $("#food-tree");
+  const branches = new Map();
+  for (const food of items) {
+    if (!branches.has(food.group)) branches.set(food.group, new Map());
+    const subgroups = branches.get(food.group);
+    subgroups.set(food.subgroup, (subgroups.get(food.subgroup) || 0) + 1);
+  }
+
+  const allButton = document.createElement("button");
+  allButton.type = "button";
+  allButton.className = `food-tree-all${foodCatalogState.group ? "" : " active"}`;
+  allButton.textContent = `Все продукты · ${items.length}`;
+  allButton.addEventListener("click", () => selectFoodBranch());
+  const nodes = [allButton];
+
+  for (const [group, subgroups] of [...branches].sort(([a], [b]) => a.localeCompare(b, "ru"))) {
+    const details = document.createElement("details");
+    details.open = foodCatalogState.group === group;
+    const summary = document.createElement("summary");
+    const count = [...subgroups.values()].reduce((sum, value) => sum + value, 0);
+    summary.append(document.createTextNode(group));
+    const countNode = document.createElement("small");
+    countNode.textContent = count;
+    summary.append(countNode);
+    summary.addEventListener("click", () => {
+      foodCatalogState.group = group;
+      foodCatalogState.subgroup = "";
+      foodCatalogState.visible = FOOD_PAGE_SIZE;
+      setTimeout(() => renderFoodResults(foodLevelItems()), 0);
+    });
+    details.append(summary);
+    for (const [subgroup, subgroupCount] of [...subgroups].sort(([a], [b]) => a.localeCompare(b, "ru"))) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `food-tree-subgroup${foodCatalogState.group === group && foodCatalogState.subgroup === subgroup ? " active" : ""}`;
+      button.textContent = `${subgroup} · ${subgroupCount}`;
+      button.addEventListener("click", () => selectFoodBranch(group, subgroup));
+      details.append(button);
+    }
+    nodes.push(details);
+  }
+  tree.replaceChildren(...nodes);
+}
+
+function matchingFoods(items) {
+  const query = normalizedFoodSearch(foodCatalogState.query);
+  const matches = items.filter((food) => {
+    if (foodCatalogState.group && food.group !== foodCatalogState.group) return false;
+    if (foodCatalogState.subgroup && food.subgroup !== foodCatalogState.subgroup) return false;
+    if (!query) return true;
+    const haystackWords = food.search.split(" ");
+    return query.split(" ").every((word) => {
+      if (haystackWords.includes(word)) return true;
+      const stem = word.length >= 6 ? word.slice(0, 5) : word;
+      return stem.length >= 4 && haystackWords.some((candidate) => candidate.startsWith(stem));
+    });
+  });
+  if (!query) return matches;
+  return matches.sort((first, second) => {
+    const firstExact = normalizedFoodSearch(first.name) === query ? 0 : 1;
+    const secondExact = normalizedFoodSearch(second.name) === query ? 0 : 1;
+    if (firstExact !== secondExact) return firstExact - secondExact;
+    if (query === "курица") {
+      const chickenRank = (food) => /^курин(?:ая|ое|ый|ые)(?=\s|,|$)/i.test(food.name) ? 0 : /^курица(?:,|$)/i.test(food.name) ? 1 : 2;
+      const rankDifference = chickenRank(first) - chickenRank(second);
+      if (rankDifference) return rankDifference;
+    }
+    const firstQualified = first.name.includes(" — ") ? 1 : 0;
+    const secondQualified = second.name.includes(" — ") ? 1 : 0;
+    if (firstQualified !== secondQualified) return firstQualified - secondQualified;
+    const firstDetails = (first.name.match(/,/g) || []).length;
+    const secondDetails = (second.name.match(/,/g) || []).length;
+    return firstDetails - secondDetails || first.name.length - second.name.length || first.name.localeCompare(second.name, "ru");
+  });
+}
+
+function macroNode(label, value) {
+  const node = document.createElement("span");
+  const strong = document.createElement("strong");
+  strong.textContent = format(value);
+  node.append(strong, document.createTextNode(label));
+  return node;
+}
+
+function chooseCatalogFood(food) {
+  $("#food-calories").value = food.kcal;
+  $("#food-proteins").value = food.protein;
+  $("#food-fats").value = food.fat;
+  $("#food-carbs").value = food.carbs;
+  if (!$("#food-portion").value) $("#food-portion").value = "100";
+  $("#selected-food-caption").textContent = `${food.name} · ${food.source} · значения на 100 г`;
+  $("#food-catalog-dialog").close();
+  calculateNutrition(false);
+  $("#food-portion").focus();
+  toast(`Выбран продукт: ${food.name}.`);
+}
+
+function renderFoodResults(items) {
+  const matches = matchingFoods(items);
+  const visible = matches.slice(0, foodCatalogState.visible);
+  const list = $("#food-list");
+  const nodes = visible.map((food) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "food-item";
+    const name = document.createElement("span");
+    name.className = "food-item-name";
+    const title = document.createElement("strong");
+    title.textContent = food.name;
+    const original = document.createElement("small");
+    const badge = document.createElement("span");
+    badge.className = "food-badge";
+    badge.textContent = `Уровень ${food.level}`;
+    original.append(badge, document.createTextNode(`${food.original} · ${food.source}`));
+    name.append(title, original);
+    const macros = document.createElement("span");
+    macros.className = "food-item-macros";
+    macros.append(macroNode(" ккал", food.kcal), macroNode(" Б", food.protein), macroNode(" Ж", food.fat), macroNode(" У", food.carbs));
+    button.append(name, macros);
+    button.addEventListener("click", () => chooseCatalogFood(food));
+    return button;
+  });
+  if (!nodes.length) {
+    const empty = document.createElement("p");
+    empty.className = "food-empty";
+    empty.textContent = "По вашему запросу ничего не найдено.";
+    nodes.push(empty);
+  }
+  list.replaceChildren(...nodes);
+  const branch = [foodCatalogState.group, foodCatalogState.subgroup].filter(Boolean).join(" → ") || "Все продукты";
+  $("#food-breadcrumbs").textContent = `${branch} · найдено ${matches.length}`;
+  const showMore = $("#food-show-more");
+  showMore.hidden = visible.length >= matches.length;
+  $("#food-catalog-count").textContent = `${FOOD_CATALOG.length} позиций: ${FOOD_BY_LEVEL[1].length} основных и ${FOOD_BY_LEVEL[2].length} расширенных`;
+}
+
+function renderFoodCatalog() {
+  const items = foodLevelItems();
+  renderFoodTree(items);
+  renderFoodResults(items);
+}
+
+function openFoodCatalog() {
+  if (!FOOD_CATALOG.length) return toast("База продуктов не загрузилась. Обновите страницу.", true);
+  renderFoodCatalog();
+  $("#food-catalog-dialog").showModal();
+  setTimeout(() => $("#food-catalog-search").focus(), 50);
+}
+
 function getPositive(selector, label, { allowZero = true, integer = false } = {}) {
   const input = $(selector);
   const value = numberFrom(input.value);
@@ -347,6 +527,7 @@ function addManual(selector, type) {
 
 function clearNutritionInputs() {
   for (const key of NUTRIENTS) $(`#result-${key}`).textContent = "—";
+  $("#selected-food-caption").textContent = "Можно также заполнить КБЖУ вручную";
 }
 
 function clearActivityInputs() {
@@ -779,6 +960,24 @@ function bindEvents() {
     toast("Порция добавлена в дневное меню.");
   });
   $("#nutrition-reset").addEventListener("click", clearNutritionInputs);
+  $("#food-catalog-open").addEventListener("click", openFoodCatalog);
+  $("#food-catalog-search").addEventListener("input", (event) => {
+    foodCatalogState.query = event.target.value;
+    foodCatalogState.visible = FOOD_PAGE_SIZE;
+    clearTimeout(foodSearchTimer);
+    foodSearchTimer = setTimeout(() => renderFoodResults(foodLevelItems()), 100);
+  });
+  $$("input[name='food-level']").forEach((input) => input.addEventListener("change", (event) => {
+    foodCatalogState.level = event.target.value;
+    foodCatalogState.group = "";
+    foodCatalogState.subgroup = "";
+    foodCatalogState.visible = FOOD_PAGE_SIZE;
+    renderFoodCatalog();
+  }));
+  $("#food-show-more").addEventListener("click", () => {
+    foodCatalogState.visible += FOOD_PAGE_SIZE;
+    renderFoodResults(foodLevelItems());
+  });
 
   $$('[data-calculate]').forEach((button) => button.addEventListener("click", () => calculateActivity(button.dataset.calculate)));
   $("#activity-add").addEventListener("click", () => {

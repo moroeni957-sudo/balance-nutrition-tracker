@@ -11,7 +11,8 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
-  <script src="app.js?v=13" defer></script>
+  <script src="food-database.js?v=6" defer></script>
+  <script src="app.js?v=20" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -107,6 +108,10 @@
           <div>
             <p class="section-number">01 / Питание</p>
             <h2 id="nutrition-title">Калькулятор порции</h2>
+            <button class="food-catalog-trigger" id="food-catalog-open" type="button">
+              <span>Выбрать продукт из каталога</span><span aria-hidden="true">→</span>
+            </button>
+            <p class="selected-food-caption" id="selected-food-caption">Можно также заполнить КБЖУ вручную</p>
           </div>
           <p>Значения на 100 г</p>
         </div>
@@ -229,6 +234,29 @@
   </main>
 
   <footer><p>Данные хранятся только в вашем браузере.</p><button class="text-button" id="export-all-button" type="button">Скачать весь архив →</button></footer>
+
+  <dialog id="food-catalog-dialog" class="food-catalog-dialog">
+    <div class="food-catalog-head">
+      <div><p class="eyebrow">База продуктов</p><h2>Выберите продукт</h2><p id="food-catalog-count" class="muted"></p></div>
+      <button class="dialog-close" type="button" data-close="food-catalog-dialog" aria-label="Закрыть">×</button>
+    </div>
+    <div class="food-catalog-tools">
+      <label class="food-search"><span class="sr-only">Поиск продукта</span><input id="food-catalog-search" type="search" placeholder="Например, рис варёный или chicken breast" autocomplete="off"></label>
+      <fieldset class="food-level-filter" aria-label="Уровень каталога">
+        <label><input type="radio" name="food-level" value="all" checked><span>Все</span></label>
+        <label><input type="radio" name="food-level" value="1"><span>Основные</span></label>
+        <label><input type="radio" name="food-level" value="2"><span>Расширенные</span></label>
+      </fieldset>
+    </div>
+    <div class="food-catalog-layout">
+      <nav class="food-tree" id="food-tree" aria-label="Группы продуктов"></nav>
+      <section class="food-results" aria-label="Список продуктов">
+        <div class="food-breadcrumbs" id="food-breadcrumbs">Все продукты</div>
+        <div class="food-list" id="food-list"></div>
+        <button class="button button-ghost food-show-more" id="food-show-more" type="button" hidden>Показать ещё</button>
+      </section>
+    </div>
+  </dialog>
 
   <dialog id="profile-dialog">
     <form id="profile-form" method="dialog">
