@@ -10,11 +10,11 @@ const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
 const PROFILE_PRESETS = Object.freeze({
   Eni: Object.freeze({ mode: "Eni", gender: "male", weight: 83, height: 178, age: 32 }),
-  "Бусинка": Object.freeze({ mode: "Бусинка", gender: "female", weight: 63, height: 174, age: 35 }),
+  "Ð‘ÑƒÑÐ¸Ð½ÐºÐ°": Object.freeze({ mode: "Ð‘ÑƒÑÐ¸Ð½ÐºÐ°", gender: "female", weight: 63, height: 174, age: 35 }),
 });
 const MET = {
-  cardio: { "Лёгкая": 3, "Умеренная": 5.5, "Высокая": 8 },
-  strength: { "Лёгкая": 2, "Умеренная": 4, "Высокая": 6 },
+  cardio: { "Ð›Ñ‘Ð³ÐºÐ°Ñ": 3, "Ð£Ð¼ÐµÑ€ÐµÐ½Ð½Ð°Ñ": 5.5, "Ð’Ñ‹ÑÐ¾ÐºÐ°Ñ": 8 },
+  strength: { "Ð›Ñ‘Ð³ÐºÐ°Ñ": 2, "Ð£Ð¼ÐµÑ€ÐµÐ½Ð½Ð°Ñ": 4, "Ð’Ñ‹ÑÐ¾ÐºÐ°Ñ": 6 },
 };
 const NUTRIENTS = ["calories", "proteins", "fats", "carbs"];
 
@@ -69,6 +69,76 @@ function chatEndpoint() {
   return typeof endpoint === "string" ? endpoint.trim() : "";
 }
 
+function postQueueRequest(endpoint, payload) {
+  return new Promise((resolve) => {
+    const frameName = `codex-queue-${payload.request_id}`;
+    const frame = document.createElement("iframe");
+    const form = document.createElement("form");
+    const input = document.createElement("input");
+    frame.hidden = true;
+    frame.name = frameName;
+    form.hidden = true;
+    form.method = "POST";
+    form.action = endpoint;
+    form.target = frameName;
+    input.type = "hidden";
+    input.name = "payload";
+    input.value = JSON.stringify(payload);
+    form.append(input);
+    document.body.append(frame, form);
+    frame.addEventListener("load", () => {
+      setTimeout(() => {
+        form.remove();
+        frame.remove();
+      }, 1000);
+      resolve();
+    }, { once: true });
+    form.submit();
+    setTimeout(resolve, 2000);
+  });
+}
+
+function queueStatus(endpoint, requestId) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `balanceCodexStatus_${requestId.replaceAll("-", "_")}`;
+    const script = document.createElement("script");
+    const timer = setTimeout(() => finish(new Error("Ð¡ÐµÑ€Ð²Ð¸Ñ Ð¾Ñ‡ÐµÑ€ÐµÐ´Ð¸ Ð½Ðµ Ð¾Ñ‚Ð²ÐµÑ‚Ð¸Ð» Ð²Ð¾Ð²Ñ€ÐµÐ¼Ñ.")), 15000);
+    function finish(error, value) {
+      clearTimeout(timer);
+      script.remove();
+      delete window[callbackName];
+      error ? reject(error) : resolve(value);
+    }
+    window[callbackName] = (data) => finish(null, data);
+    const url = new URL(endpoint);
+    url.searchParams.set("action", "status");
+    url.searchParams.set("request_id", requestId);
+    url.searchParams.set("callback", callbackName);
+    url.searchParams.set("_", String(Date.now()));
+    script.onerror = () => finish(new Error("ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ñ€Ð¾Ð²ÐµÑ€Ð¸Ñ‚ÑŒ Ð¾Ñ‚Ð²ÐµÑ‚ Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´Ð¸."));
+    script.src = url.toString();
+    document.head.append(script);
+  });
+}
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+async function waitForQueueAnswer(endpoint, requestId, output) {
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  let attempts = 0;
+  while (Date.now() < expiresAt) {
+    await wait(attempts === 0 ? 2500 : 8000);
+    attempts += 1;
+    const data = await queueStatus(endpoint, requestId);
+    if (data?.status === "completed" && typeof data.answer === "string") return data.answer.trim();
+    if (data?.status === "failed") throw new Error(data.error || "Codex Ð½Ðµ ÑÐ¼Ð¾Ð³ Ð¿Ð¾Ð´Ð³Ð¾Ñ‚Ð¾Ð²Ð¸Ñ‚ÑŒ Ð¾Ñ‚Ð²ÐµÑ‚.");
+    output.textContent = data?.status === "processing"
+      ? "Ð’Ð°Ñˆ ÐŸÐš Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ð» Ð²Ð¾Ð¿Ñ€Ð¾Ñ. Codex Ð³Ð¾Ñ‚Ð¾Ð²Ð¸Ñ‚ Ð¾Ñ‚Ð²ÐµÑ‚â€¦"
+      : "Ð’Ð¾Ð¿Ñ€Ð¾Ñ ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½ Ð½Ð° Google Drive Ð¸ Ð¶Ð´Ñ‘Ñ‚ Ð²ÐºÐ»ÑŽÑ‡Ñ‘Ð½Ð½Ñ‹Ð¹ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñ‹Ð¹ workerâ€¦";
+  }
+  throw new Error("ÐžÑ‚Ð²ÐµÑ‚ Ð¿Ð¾ÐºÐ° Ð½Ðµ Ð³Ð¾Ñ‚Ð¾Ð². Ð—Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚Ðµ worker Ð½Ð° Ð²Ð°ÑˆÐµÐ¼ ÐŸÐš Ð¸ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²ÑŒÑ‚Ðµ Ð²Ð¾Ð¿Ñ€Ð¾Ñ ÐµÑ‰Ñ‘ Ñ€Ð°Ð·.");
+}
+
 async function sendCodexQuestion(event) {
   event.preventDefault();
   const input = $("#codex-chat-input");
@@ -77,26 +147,28 @@ async function sendCodexQuestion(event) {
   const message = input.value.trim();
   const endpoint = chatEndpoint();
   if (!message) return;
-  if (!endpoint || endpoint.includes("PASTE_CLOUD_RUN_URL")) {
+  if (!endpoint || endpoint.includes("PASTE_APPS_SCRIPT_URL")) {
     output.className = "codex-chat-output error";
-    output.textContent = "Облачный чат ещё не подключён. Попробуйте позже.";
+    output.textContent = "ÐžÑ‡ÐµÑ€ÐµÐ´ÑŒ Ð²Ð¾Ð¿Ñ€Ð¾ÑÐ¾Ð² ÐµÑ‰Ñ‘ Ð½Ðµ Ð¿Ð¾Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð°. ÐŸÐ¾Ð¿Ñ€Ð¾Ð±ÑƒÐ¹Ñ‚Ðµ Ð¿Ð¾Ð·Ð¶Ðµ.";
     return;
   }
 
   button.disabled = true;
   input.disabled = true;
   output.className = "codex-chat-output loading";
-  output.textContent = "Codex готовит ответ…";
+  output.textContent = "Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÑÐµÐ¼ Ð²Ð¾Ð¿Ñ€Ð¾Ñ Ð² Ð¾Ñ‡ÐµÑ€ÐµÐ´ÑŒ Google Driveâ€¦";
   try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message, session_id: chatSessionId(), history: chatHistory }),
+    const requestId = crypto.randomUUID();
+    await postQueueRequest(endpoint, {
+      action: "enqueue",
+      request_id: requestId,
+      session_id: chatSessionId(),
+      message,
+      history: chatHistory,
+      source: location.origin,
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `Сервер вернул ошибку ${response.status}.`);
-    if (typeof data.answer !== "string" || !data.answer.trim()) throw new Error("Codex не вернул текст ответа.");
-    const answer = data.answer.trim();
+    const answer = await waitForQueueAnswer(endpoint, requestId, output);
+    if (!answer) throw new Error("Codex Ð½Ðµ Ð²ÐµÑ€Ð½ÑƒÐ» Ñ‚ÐµÐºÑÑ‚ Ð¾Ñ‚Ð²ÐµÑ‚Ð°.");
     chatHistory = [...chatHistory, { role: "user", content: message }, { role: "assistant", content: answer }].slice(-8);
     localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
     output.className = "codex-chat-output";
@@ -104,7 +176,7 @@ async function sendCodexQuestion(event) {
     input.value = "";
   } catch (error) {
     output.className = "codex-chat-output error";
-    output.textContent = error.message || "Не удалось получить ответ. Попробуйте ещё раз.";
+    output.textContent = error.message || "ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¿Ð¾Ð»ÑƒÑ‡Ð¸Ñ‚ÑŒ Ð¾Ñ‚Ð²ÐµÑ‚. ÐŸÐ¾Ð¿Ñ€Ð¾Ð±ÑƒÐ¹Ñ‚Ðµ ÐµÑ‰Ñ‘ Ñ€Ð°Ð·.";
   } finally {
     button.disabled = false;
     input.disabled = false;
@@ -134,7 +206,7 @@ function normalizeProfile(candidate) {
 }
 
 function format(value) {
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "â€”";
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(Math.round(value * 100) / 100);
 }
 
@@ -147,20 +219,20 @@ function validRecord(candidate, fallbackDate) {
   try {
     const date = String(candidate.date || fallbackDate || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(`${date}T12:00:00`).getTime())) {
-      throw new Error("Некорректная дата записи");
+      throw new Error("ÐÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½Ð°Ñ Ð´Ð°Ñ‚Ð° Ð·Ð°Ð¿Ð¸ÑÐ¸");
     }
     const totals = Object.fromEntries(NUTRIENTS.map((key) => {
       const value = numberFrom(candidate.menu.totals[key]);
-      if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные значения меню");
+      if (!Number.isFinite(value) || value < 0) throw new Error("ÐÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½Ñ‹Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ñ Ð¼ÐµÐ½ÑŽ");
       return [key, value];
     }));
     const burned = numberFrom(candidate.activity.burned_calories);
-    if (!Number.isFinite(burned) || burned < 0) throw new Error("Некорректное значение активности");
+    if (!Number.isFinite(burned) || burned < 0) throw new Error("ÐÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½Ð¾Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ðµ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸");
     const waterSource = candidate.water || {};
     const waterGoal = numberFrom(waterSource.goal_ml ?? 0);
     const waterConsumed = numberFrom(waterSource.consumed_ml ?? 0);
     if (!Number.isFinite(waterGoal) || waterGoal < 0 || !Number.isFinite(waterConsumed) || waterConsumed < 0) {
-      throw new Error("Некорректные значения воды");
+      throw new Error("ÐÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½Ñ‹Ðµ Ð·Ð½Ð°Ñ‡ÐµÐ½Ð¸Ñ Ð²Ð¾Ð´Ñ‹");
     }
     return {
       date,
@@ -169,7 +241,7 @@ function validRecord(candidate, fallbackDate) {
       water: { goal_ml: waterGoal, consumed_ml: waterConsumed },
     };
   } catch (error) {
-    throw new Error(error.message || "Некорректная структура файла");
+    throw new Error(error.message || "ÐÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚Ð½Ð°Ñ ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð° Ñ„Ð°Ð¹Ð»Ð°");
   }
 }
 
@@ -186,11 +258,11 @@ function storeRecord(value) { localStorage.setItem(storageKey(value.date), JSON.
 async function loadDate(date, tryRepository = false) {
   activeDate = date;
   $("#active-date").value = date;
-  $("#date-caption").textContent = date === todayISO() ? "Сегодня" : "Выбранная дата";
+  $("#date-caption").textContent = date === todayISO() ? "Ð¡ÐµÐ³Ð¾Ð´Ð½Ñ" : "Ð’Ñ‹Ð±Ñ€Ð°Ð½Ð½Ð°Ñ Ð´Ð°Ñ‚Ð°";
 
   if (!hasStoredRecord(date) && tryRepository) {
     try {
-      const path = `График меню и активности/Меню и активность ${date}.json`;
+      const path = `Ð“Ñ€Ð°Ñ„Ð¸Ðº Ð¼ÐµÐ½ÑŽ Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸/ÐœÐµÐ½ÑŽ Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ ${date}.json`;
       const response = await fetch(path);
       if (response.ok) {
         const imported = validRecord(await response.json(), date);
@@ -228,13 +300,13 @@ function renderWater() {
   fill.style.height = `${visiblePercent}%`;
   bottle.setAttribute("aria-valuenow", String(consumed));
   bottle.setAttribute("aria-valuemax", String(goal || 1));
-  $("#water-goal-label").textContent = goal > 0 ? `${format(goal)} мл` : "Норма";
-  $("#water-current-value").textContent = `${format(consumed)} мл`;
+  $("#water-goal-label").textContent = goal > 0 ? `${format(goal)} Ð¼Ð»` : "ÐÐ¾Ñ€Ð¼Ð°";
+  $("#water-current-value").textContent = `${format(consumed)} Ð¼Ð»`;
   // The liquid chamber starts 25 px above the scale bottom and is 230 px tall.
   $("#water-current-label").style.bottom = `${25 + visiblePercent * 2.3}px`;
   $("#water-progress-caption").textContent = goal > 0
-    ? `${format(consumed)} из ${format(goal)} мл · ${format(percent)}%`
-    : `${format(consumed)} мл · укажите дневную норму`;
+    ? `${format(consumed)} Ð¸Ð· ${format(goal)} Ð¼Ð» Â· ${format(percent)}%`
+    : `${format(consumed)} Ð¼Ð» Â· ÑƒÐºÐ°Ð¶Ð¸Ñ‚Ðµ Ð´Ð½ÐµÐ²Ð½ÑƒÑŽ Ð½Ð¾Ñ€Ð¼Ñƒ`;
   if (document.activeElement !== $("#water-goal")) $("#water-goal").value = goal || "";
 
   const extra = goal > 0 ? Math.max(0, consumed - goal) : 0;
@@ -245,7 +317,7 @@ function renderWater() {
   glasses.replaceChildren(...Array.from({ length: glassCount }, (_, index) => {
     const glass = document.createElement("span");
     glass.className = "water-glass";
-    glass.setAttribute("aria-label", `Дополнительные ${250 * (index + 1)} мл`);
+    glass.setAttribute("aria-label", `Ð”Ð¾Ð¿Ð¾Ð»Ð½Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ðµ ${250 * (index + 1)} Ð¼Ð»`);
     glass.innerHTML = "<i></i><small>+250</small>";
     return glass;
   }));
@@ -260,39 +332,39 @@ function saveWater() {
 
 function updateWaterGoal() {
   try {
-    const goal = getPositive("#water-goal", "Дневная норма", { allowZero: false, integer: true });
+    const goal = getPositive("#water-goal", "Ð”Ð½ÐµÐ²Ð½Ð°Ñ Ð½Ð¾Ñ€Ð¼Ð°", { allowZero: false, integer: true });
     record.water.goal_ml = goal;
     localStorage.setItem(WATER_GOAL_KEY, JSON.stringify(goal));
     saveWater();
     renderWater();
-    toast(`Дневная норма воды: ${format(goal)} мл.`);
+    toast(`Ð”Ð½ÐµÐ²Ð½Ð°Ñ Ð½Ð¾Ñ€Ð¼Ð° Ð²Ð¾Ð´Ñ‹: ${format(goal)} Ð¼Ð».`);
   } catch (error) { toast(error.message, true); }
 }
 
 function addWater() {
   try {
-    if (!(record.water.goal_ml > 0)) throw new Error("Сначала укажите дневную норму воды.");
-    const amount = getPositive("#water-amount", "Выпито сейчас", { allowZero: false, integer: true });
+    if (!(record.water.goal_ml > 0)) throw new Error("Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° ÑƒÐºÐ°Ð¶Ð¸Ñ‚Ðµ Ð´Ð½ÐµÐ²Ð½ÑƒÑŽ Ð½Ð¾Ñ€Ð¼Ñƒ Ð²Ð¾Ð´Ñ‹.");
+    const amount = getPositive("#water-amount", "Ð’Ñ‹Ð¿Ð¸Ñ‚Ð¾ ÑÐµÐ¹Ñ‡Ð°Ñ", { allowZero: false, integer: true });
     record.water.consumed_ml += amount;
     $("#water-amount").value = "";
     saveWater();
     renderWater();
-    toast(`Добавлено ${format(amount)} мл воды.`);
+    toast(`Ð”Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¾ ${format(amount)} Ð¼Ð» Ð²Ð¾Ð´Ñ‹.`);
   } catch (error) { toast(error.message, true); }
 }
 
 function resetWater() {
   if (!(record.water.consumed_ml > 0)) return;
-  if (!confirm(`Обнулить выпитую воду за ${displayDate(activeDate)}?`)) return;
+  if (!confirm(`ÐžÐ±Ð½ÑƒÐ»Ð¸Ñ‚ÑŒ Ð²Ñ‹Ð¿Ð¸Ñ‚ÑƒÑŽ Ð²Ð¾Ð´Ñƒ Ð·Ð° ${displayDate(activeDate)}?`)) return;
   record.water.consumed_ml = 0;
   saveWater();
   renderWater();
-  toast("Дневной объём воды обнулён.");
+  toast("Ð”Ð½ÐµÐ²Ð½Ð¾Ð¹ Ð¾Ð±ÑŠÑ‘Ð¼ Ð²Ð¾Ð´Ñ‹ Ð¾Ð±Ð½ÑƒÐ»Ñ‘Ð½.");
 }
 
 function renderSaveState(kind, dirty) {
   const target = $(`#${kind}-save-state`);
-  target.textContent = dirty ? "Есть несохранённые изменения" : (hasStoredRecord(activeDate) ? "Сохранено" : "Не сохранено");
+  target.textContent = dirty ? "Ð•ÑÑ‚ÑŒ Ð½ÐµÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½Ð½Ñ‹Ðµ Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸Ñ" : (hasStoredRecord(activeDate) ? "Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¾" : "ÐÐµ ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¾");
   target.classList.toggle("saved", !dirty && hasStoredRecord(activeDate));
 }
 
@@ -304,13 +376,13 @@ function renderBalance() {
   const status = $("#balance-status");
   status.className = "balance-status";
   if (difference > 0) {
-    status.innerHTML = `Профицит <strong>+${magnitude}</strong> ккал`;
+    status.innerHTML = `ÐŸÑ€Ð¾Ñ„Ð¸Ñ†Ð¸Ñ‚ <strong>+${magnitude}</strong> ÐºÐºÐ°Ð»`;
     status.classList.add("surplus");
   } else if (difference < 0) {
-    status.innerHTML = `Дефицит <strong>−${magnitude}</strong> ккал`;
+    status.innerHTML = `Ð”ÐµÑ„Ð¸Ñ†Ð¸Ñ‚ <strong>âˆ’${magnitude}</strong> ÐºÐºÐ°Ð»`;
     status.classList.add("deficit");
   } else {
-    status.innerHTML = `Баланс <strong>0</strong> ккал`;
+    status.innerHTML = `Ð‘Ð°Ð»Ð°Ð½Ñ <strong>0</strong> ÐºÐºÐ°Ð»`;
     status.classList.add("neutral");
   }
   const normalized = Math.max(-1, Math.min(1, difference / Math.max(consumed, burned, 1)));
@@ -332,7 +404,7 @@ function getPositive(selector, label, { allowZero = true, integer = false } = {}
   const valid = Number.isFinite(value) && value >= 0 && (allowZero || value > 0) && (!integer || Number.isInteger(value));
   if (!valid) {
     input.focus();
-    throw new Error(`Проверьте поле «${label}».`);
+    throw new Error(`ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ Ð¿Ð¾Ð»Ðµ Â«${label}Â».`);
   }
   return value;
 }
@@ -340,12 +412,12 @@ function getPositive(selector, label, { allowZero = true, integer = false } = {}
 function calculateNutrition(showError = true) {
   try {
     const base = {
-      calories: getPositive("#food-calories", "Калорийность"),
-      proteins: getPositive("#food-proteins", "Белки"),
-      fats: getPositive("#food-fats", "Жиры"),
-      carbs: getPositive("#food-carbs", "Углеводы"),
+      calories: getPositive("#food-calories", "ÐšÐ°Ð»Ð¾Ñ€Ð¸Ð¹Ð½Ð¾ÑÑ‚ÑŒ"),
+      proteins: getPositive("#food-proteins", "Ð‘ÐµÐ»ÐºÐ¸"),
+      fats: getPositive("#food-fats", "Ð–Ð¸Ñ€Ñ‹"),
+      carbs: getPositive("#food-carbs", "Ð£Ð³Ð»ÐµÐ²Ð¾Ð´Ñ‹"),
     };
-    const portion = getPositive("#food-portion", "Размер порции", { allowZero: false });
+    const portion = getPositive("#food-portion", "Ð Ð°Ð·Ð¼ÐµÑ€ Ð¿Ð¾Ñ€Ñ†Ð¸Ð¸", { allowZero: false });
     const result = Object.fromEntries(NUTRIENTS.map((key) => [key, base[key] * portion / 100]));
     for (const key of NUTRIENTS) $(`#result-${key}`).textContent = format(result[key]);
     return result;
@@ -358,7 +430,7 @@ function calculateNutrition(showError = true) {
 function ensureProfile() {
   if (profile && profile.weight > 0 && profile.height > 0 && profile.age > 0 && ["male", "female"].includes(profile.gender)) return true;
   openProfile();
-  toast("Сначала заполните профиль для расчёта активности.", true);
+  toast("Ð¡Ð½Ð°Ñ‡Ð°Ð»Ð° Ð·Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ Ð¿Ñ€Ð¾Ñ„Ð¸Ð»ÑŒ Ð´Ð»Ñ Ñ€Ð°ÑÑ‡Ñ‘Ñ‚Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸.", true);
   return false;
 }
 
@@ -372,140 +444,12 @@ function calculateActivity(kind, showError = true) {
     if (!ensureProfile()) return null;
     let value;
     if (kind === "rest") {
-      const hours = getPositive("#rest-hours", "Часы");
-      const minutes = getPositive("#rest-minutes", "Минуты", { integer: true });
-      if (minutes >= 60 || hours + minutes === 0) throw new Error("Укажите время покоя, минуты — от 0 до 59.");
-      value = bmr() * (hours + minutes / 60) / 24;
-    } else if (kind === "steps") {
-      const steps = getPositive("#steps", "Шаги", { allowZero: false, integer: true });
-      value = steps * profile.weight * STEP_COEFFICIENT;
-    } else {
-      const minutes = getPositive(`#${kind}-minutes`, "Минуты", { allowZero: false });
-      const intensity = $(`#${kind}-intensity`).value;
-      value = MET[kind][intensity] * 3.5 * profile.weight * minutes / 200;
-    }
-    $(`#${kind}-result strong`).textContent = format(value);
-    return value;
-  } catch (error) {
-    if (showError) toast(error.message, true);
-    return null;
-  }
-}
-
-function activityIsFilled(kind) {
-  if (kind === "rest") return Boolean($("#rest-hours").value.trim() || $("#rest-minutes").value.trim());
-  if (kind === "steps") return Boolean($("#steps").value.trim());
-  return Boolean($(`#${kind}-minutes`).value.trim());
-}
-
-function addManual(selector, type) {
-  try {
-    const value = getPositive(selector, type === "menu" ? "Калории" : "Энергозатраты", { allowZero: false });
-    if (type === "menu") {
-      record.menu.totals.calories += value;
-      menuDirty = true;
-    } else {
-      record.activity.burned_calories += value;
-      activityDirty = true;
-    }
-    $(selector).value = "";
-    render();
-  } catch (error) { toast(error.message, true); }
-}
-
-function clearNutritionInputs() {
-  for (const key of NUTRIENTS) $(`#result-${key}`).textContent = "—";
-}
-
-function clearActivityInputs() {
-  for (const selector of ["#rest-hours", "#rest-minutes", "#steps", "#cardio-minutes", "#strength-minutes"]) $(selector).value = "";
-  $("#cardio-intensity").value = "Умеренная";
-  $("#strength-intensity").value = "Умеренная";
-  for (const kind of ["rest", "steps", "cardio", "strength"]) $(`#${kind}-result strong`).textContent = "—";
-}
-
-function savePart(part) {
-  const saved = getStoredRecord(activeDate);
-  if (part === "menu") {
-    saved.menu = structuredClone(record.menu);
-    menuDirty = false;
-  } else {
-    saved.activity = structuredClone(record.activity);
-    activityDirty = false;
-  }
-  saved.date = activeDate;
-  storeRecord(saved);
-  render();
-  toast(`${part === "menu" ? "Меню" : "Активность"} за ${displayDate(activeDate)} сохранен${part === "menu" ? "о" : "а"}.`);
-}
-
-function clearPart(part, savedToo) {
-  const label = part === "menu" ? "меню" : "активность";
-  if (savedToo && !confirm(`Обнулить ${label} за ${displayDate(activeDate)} в архиве?`)) return;
-  if (part === "menu") {
-    record.menu = emptyRecord(activeDate).menu;
-    menuDirty = !savedToo;
-  } else {
-    record.activity = emptyRecord(activeDate).activity;
-    activityDirty = !savedToo;
-  }
-  if (savedToo) {
-    const saved = getStoredRecord(activeDate);
-    saved[part] = structuredClone(record[part]);
-    saved.date = activeDate;
-    storeRecord(saved);
-    if (part === "menu") menuDirty = false; else activityDirty = false;
-    toast(`${part === "menu" ? "Меню" : "Активность"} в архиве обнулен${part === "menu" ? "о" : "а"}.`);
-  }
-  render();
-}
-
-function renderProfile() {
-  const presetName = profile && Object.hasOwn(PROFILE_PRESETS, profile.mode) ? profile.mode : null;
-  $("#profile-summary").textContent = profile
-    ? `${presetName ? `${presetName} · ` : ""}${format(profile.weight)} кг · ${profile.age} лет`
-    : "Заполните профиль";
-  const mode = presetName || "manual";
-  $(`input[name="profile-mode"][value="${mode}"]`).checked = true;
-  $$('input[name="gender"]').forEach((input) => { input.checked = input.value === profile?.gender; });
-  $("#profile-weight").value = profile?.weight ?? "";
-  $("#profile-height").value = profile?.height ?? "";
-  $("#profile-age").value = profile?.age ?? "";
-  setProfileMode(mode);
-}
-
-function setProfileMode(mode) {
-  const presetSelected = Object.hasOwn(PROFILE_PRESETS, mode);
-  const manualFields = $("#manual-profile-fields");
-  manualFields.hidden = presetSelected;
-  $$('input[name="gender"], #profile-weight, #profile-height, #profile-age', manualFields)
-    .forEach((input) => { input.disabled = presetSelected; });
-}
-
-function openProfile() {
-  renderProfile();
-  const dialog = $("#profile-dialog");
-  if (!dialog.open) dialog.showModal();
-}
-
-function saveProfile(event) {
-  event.preventDefault();
-  const mode = $('input[name="profile-mode"]:checked')?.value || "manual";
-  if (Object.hasOwn(PROFILE_PRESETS, mode)) {
-    profile = { ...PROFILE_PRESETS[mode] };
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-    $("#profile-error").textContent = "";
-    renderProfile();
-    $("#profile-dialog").close();
-    toast(`Профиль ${mode} выбран.`);
-    return;
-  }
-  const gender = $('input[name="gender"]:checked')?.value;
+      const hours = getPositive("#rest-hours", "Ð§Ð°ÑÑ…1380 tokens truncated…me="gender"]:checked')?.value;
   const weight = numberFrom($("#profile-weight").value);
   const height = numberFrom($("#profile-height").value);
   const age = numberFrom($("#profile-age").value);
   if (!["male", "female"].includes(gender) || weight <= 0 || height <= 0 || age <= 0 || !Number.isInteger(age)) {
-    $("#profile-error").textContent = "Выберите пол, укажите положительные вес и рост, а возраст — целым числом.";
+    $("#profile-error").textContent = "Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ð¿Ð¾Ð», ÑƒÐºÐ°Ð¶Ð¸Ñ‚Ðµ Ð¿Ð¾Ð»Ð¾Ð¶Ð¸Ñ‚ÐµÐ»ÑŒÐ½Ñ‹Ðµ Ð²ÐµÑ Ð¸ Ñ€Ð¾ÑÑ‚, Ð° Ð²Ð¾Ð·Ñ€Ð°ÑÑ‚ â€” Ñ†ÐµÐ»Ñ‹Ð¼ Ñ‡Ð¸ÑÐ»Ð¾Ð¼.";
     return;
   }
   profile = { mode: "manual", gender, weight, height, age };
@@ -513,7 +457,7 @@ function saveProfile(event) {
   $("#profile-error").textContent = "";
   renderProfile();
   $("#profile-dialog").close();
-  toast("Профиль сохранён.");
+  toast("ÐŸÑ€Ð¾Ñ„Ð¸Ð»ÑŒ ÑÐ¾Ñ…Ñ€Ð°Ð½Ñ‘Ð½.");
 }
 
 function downloadJSON(data, filename) {
@@ -530,7 +474,7 @@ function driveConfig() {
   const config = window.GOOGLE_DRIVE_CONFIG || {};
   const configured = config.clientId && config.apiKey && config.appId && config.folderId
     && !Object.values(config).some((value) => String(value).startsWith("PASTE_"));
-  if (!configured) throw new Error("Google Drive ещё не настроен: добавьте OAuth Client ID, API key и номер проекта.");
+  if (!configured) throw new Error("Google Drive ÐµÑ‰Ñ‘ Ð½Ðµ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐ½: Ð´Ð¾Ð±Ð°Ð²ÑŒÑ‚Ðµ OAuth Client ID, API key Ð¸ Ð½Ð¾Ð¼ÐµÑ€ Ð¿Ñ€Ð¾ÐµÐºÑ‚Ð°.");
   return config;
 }
 
@@ -544,7 +488,7 @@ async function waitForGoogleApi(name, timeout = 12000) {
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("Не удалось загрузить сервисы Google. Проверьте интернет и блокировщик рекламы.");
+  throw new Error("ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð·Ð°Ð³Ñ€ÑƒÐ·Ð¸Ñ‚ÑŒ ÑÐµÑ€Ð²Ð¸ÑÑ‹ Google. ÐŸÑ€Ð¾Ð²ÐµÑ€ÑŒÑ‚Ðµ Ð¸Ð½Ñ‚ÐµÑ€Ð½ÐµÑ‚ Ð¸ Ð±Ð»Ð¾ÐºÐ¸Ñ€Ð¾Ð²Ñ‰Ð¸Ðº Ñ€ÐµÐºÐ»Ð°Ð¼Ñ‹.");
 }
 
 async function authorizeDrive() {
@@ -563,11 +507,11 @@ async function authorizeDrive() {
         });
       }
       driveTokenClient.callback = (response) => {
-        if (response?.error || !response?.access_token) return reject(new Error(response?.error_description || "Google не выдал разрешение на доступ."));
+        if (response?.error || !response?.access_token) return reject(new Error(response?.error_description || "Google Ð½Ðµ Ð²Ñ‹Ð´Ð°Ð» Ñ€Ð°Ð·Ñ€ÐµÑˆÐµÐ½Ð¸Ðµ Ð½Ð° Ð´Ð¾ÑÑ‚ÑƒÐ¿."));
         driveAccessToken = response.access_token;
         resolve(driveAccessToken);
       };
-      driveTokenClient.error_callback = (error) => reject(new Error(error?.message || "Окно авторизации Google было закрыто."));
+      driveTokenClient.error_callback = (error) => reject(new Error(error?.message || "ÐžÐºÐ½Ð¾ Ð°Ð²Ñ‚Ð¾Ñ€Ð¸Ð·Ð°Ñ†Ð¸Ð¸ Google Ð±Ñ‹Ð»Ð¾ Ð·Ð°ÐºÑ€Ñ‹Ñ‚Ð¾."));
       // Google remembers the grant for this account and OAuth client.
       // An empty prompt asks for consent only when it has not been granted yet.
       driveTokenClient.requestAccessToken({ prompt: "" });
@@ -590,7 +534,7 @@ function driveFolderForProfile() {
   const config = driveConfig();
   if (profile && Object.hasOwn(PROFILE_PRESETS, profile.mode)) {
     const folder = config.profileFolders?.[profile.mode];
-    if (!folder?.id) throw new Error(`Папка профиля ${profile.mode} не настроена.`);
+    if (!folder?.id) throw new Error(`ÐŸÐ°Ð¿ÐºÐ° Ð¿Ñ€Ð¾Ñ„Ð¸Ð»Ñ ${profile.mode} Ð½Ðµ Ð½Ð°ÑÑ‚Ñ€Ð¾ÐµÐ½Ð°.`);
     return { id: folder.id, name: folder.name || profile.mode, url: folder.url || "" };
   }
   return { id: config.folderId, name: config.folderName, url: config.folderUrl };
@@ -613,13 +557,13 @@ async function selectProjectFolder(folder) {
       .setAppId(config.appId)
       .setDeveloperKey(config.apiKey)
       .setOAuthToken(driveAccessToken)
-      .setTitle(`Выберите папку «${folder.name}»`)
+      .setTitle(`Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ð¿Ð°Ð¿ÐºÑƒ Â«${folder.name}Â»`)
       .addView(view)
       .setCallback((data) => {
-        if (data.action === google.picker.Action.CANCEL) reject(new Error("Выбор папки отменён."));
+        if (data.action === google.picker.Action.CANCEL) reject(new Error("Ð’Ñ‹Ð±Ð¾Ñ€ Ð¿Ð°Ð¿ÐºÐ¸ Ð¾Ñ‚Ð¼ÐµÐ½Ñ‘Ð½."));
         if (data.action !== google.picker.Action.PICKED) return;
         const selectedId = data.docs?.[0]?.id;
-        if (selectedId !== folder.id) return reject(new Error(`Выберите папку «${folder.name}».`));
+        if (selectedId !== folder.id) return reject(new Error(`Ð’Ñ‹Ð±ÐµÑ€Ð¸Ñ‚Ðµ Ð¿Ð°Ð¿ÐºÑƒ Â«${folder.name}Â».`));
         resolve(selectedId);
       })
       .build();
@@ -632,7 +576,7 @@ async function ensureDriveFolderAccess() {
   await authorizeDrive();
   if (await canAccessDriveFolder(folder.id)) return folder;
   await selectProjectFolder(folder);
-  if (!await canAccessDriveFolder(folder.id)) throw new Error("Папка не предоставлена приложению.");
+  if (!await canAccessDriveFolder(folder.id)) throw new Error("ÐŸÐ°Ð¿ÐºÐ° Ð½Ðµ Ð¿Ñ€ÐµÐ´Ð¾ÑÑ‚Ð°Ð²Ð»ÐµÐ½Ð° Ð¿Ñ€Ð¸Ð»Ð¾Ð¶ÐµÐ½Ð¸ÑŽ.");
   return folder;
 }
 
@@ -649,7 +593,7 @@ async function listDriveJsonFiles(folderId, fileName = null) {
     const params = new URLSearchParams({ q: clauses.join(" and "), fields: "nextPageToken,files(id,name,modifiedTime)", pageSize: "1000", orderBy: "modifiedTime desc" });
     if (pageToken) params.set("pageToken", pageToken);
     const response = await driveFetch(`https://www.googleapis.com/drive/v3/files?${params}`);
-    if (!response.ok) throw new Error(`Google Drive вернул ошибку ${response.status}.`);
+    if (!response.ok) throw new Error(`Google Drive Ð²ÐµÑ€Ð½ÑƒÐ» Ð¾ÑˆÐ¸Ð±ÐºÑƒ ${response.status}.`);
     const data = await response.json();
     found.push(...(data.files || []));
     pageToken = data.nextPageToken || "";
@@ -662,7 +606,7 @@ async function exportCurrentDayToDrive() {
   button.disabled = true;
   try {
     const folder = await ensureDriveFolderAccess();
-    const filename = `Меню и активность ${activeDate}.json`;
+    const filename = `ÐœÐµÐ½ÑŽ Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ ${activeDate}.json`;
     const existing = (await listDriveJsonFiles(folder.id, filename))[0];
     const content = JSON.stringify(record, null, 2);
     let response;
@@ -681,12 +625,12 @@ async function exportCurrentDayToDrive() {
         body,
       });
     }
-    if (!response.ok) throw new Error(`Не удалось сохранить файл: Google Drive вернул ${response.status}.`);
+    if (!response.ok) throw new Error(`ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ ÑÐ¾Ñ…Ñ€Ð°Ð½Ð¸Ñ‚ÑŒ Ñ„Ð°Ð¹Ð»: Google Drive Ð²ÐµÑ€Ð½ÑƒÐ» ${response.status}.`);
     storeRecord(record);
     menuDirty = false;
     activityDirty = false;
     render();
-    toast(`${filename} загружен в папку «${folder.name}».`);
+    toast(`${filename} Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½ Ð² Ð¿Ð°Ð¿ÐºÑƒ Â«${folder.name}Â».`);
   } catch (error) { toast(error.message, true); }
   finally { button.disabled = false; }
 }
@@ -710,7 +654,7 @@ async function importArchiveFromDrive() {
     }
     await loadDate(activeDate);
     drawChart();
-    toast(`Из папки «${folder.name}» загружено записей: ${imported}${skipped ? `, пропущено: ${skipped}` : ""}.`);
+    toast(`Ð˜Ð· Ð¿Ð°Ð¿ÐºÐ¸ Â«${folder.name}Â» Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½Ð¾ Ð·Ð°Ð¿Ð¸ÑÐµÐ¹: ${imported}${skipped ? `, Ð¿Ñ€Ð¾Ð¿ÑƒÑ‰ÐµÐ½Ð¾: ${skipped}` : ""}.`);
   } catch (error) { toast(error.message, true); }
   finally { button.disabled = false; }
 }
@@ -752,8 +696,8 @@ async function importJSON(file) {
       imported = 1;
     }
     await loadDate(importedDate);
-    toast(`Импортировано записей: ${imported}.`);
-  } catch (error) { toast(`Не удалось импортировать JSON: ${error.message}`, true); }
+    toast(`Ð˜Ð¼Ð¿Ð¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ð½Ð¾ Ð·Ð°Ð¿Ð¸ÑÐµÐ¹: ${imported}.`);
+  } catch (error) { toast(`ÐÐµ ÑƒÐ´Ð°Ð»Ð¾ÑÑŒ Ð¸Ð¼Ð¿Ð¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²Ð°Ñ‚ÑŒ JSON: ${error.message}`, true); }
 }
 
 function recordsForChart(days) {
@@ -783,8 +727,8 @@ function drawChart() {
   const days = Number($("#chart-period").value);
   const history = recordsForChart(days);
   const total = history.reduce((sum, item) => sum + item.value, 0);
-  const totalLabel = total > 0 ? `Профицит +${format(total)} ккал` : total < 0 ? `Дефицит −${format(Math.abs(total))} ккал` : "Баланс 0 ккал";
-  $("#chart-total").innerHTML = `Баланс за период: <strong>${totalLabel}</strong>`;
+  const totalLabel = total > 0 ? `ÐŸÑ€Ð¾Ñ„Ð¸Ñ†Ð¸Ñ‚ +${format(total)} ÐºÐºÐ°Ð»` : total < 0 ? `Ð”ÐµÑ„Ð¸Ñ†Ð¸Ñ‚ âˆ’${format(Math.abs(total))} ÐºÐºÐ°Ð»` : "Ð‘Ð°Ð»Ð°Ð½Ñ 0 ÐºÐºÐ°Ð»";
+  $("#chart-total").innerHTML = `Ð‘Ð°Ð»Ð°Ð½Ñ Ð·Ð° Ð¿ÐµÑ€Ð¸Ð¾Ð´: <strong>${totalLabel}</strong>`;
 
   const compact = width < 430;
   const plot = { left: compact ? 43 : 58, right: width - (compact ? 10 : 22), top: 26, bottom: height - 45 };
@@ -846,14 +790,14 @@ function bindEvents() {
     for (const key of NUTRIENTS) record.menu.totals[key] += calculated[key];
     menuDirty = true;
     render();
-    toast("Порция добавлена в дневное меню.");
+    toast("ÐŸÐ¾Ñ€Ñ†Ð¸Ñ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð° Ð² Ð´Ð½ÐµÐ²Ð½Ð¾Ðµ Ð¼ÐµÐ½ÑŽ.");
   });
   $("#nutrition-reset").addEventListener("click", clearNutritionInputs);
 
   $$('[data-calculate]').forEach((button) => button.addEventListener("click", () => calculateActivity(button.dataset.calculate)));
   $("#activity-add").addEventListener("click", () => {
     const kinds = ["rest", "steps", "cardio", "strength"].filter(activityIsFilled);
-    if (!kinds.length) return toast("Заполните хотя бы один вид активности.", true);
+    if (!kinds.length) return toast("Ð—Ð°Ð¿Ð¾Ð»Ð½Ð¸Ñ‚Ðµ Ñ…Ð¾Ñ‚Ñ Ð±Ñ‹ Ð¾Ð´Ð¸Ð½ Ð²Ð¸Ð´ Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚Ð¸.", true);
     let total = 0;
     for (const kind of kinds) {
       const value = calculateActivity(kind);
@@ -863,7 +807,7 @@ function bindEvents() {
     record.activity.burned_calories += total;
     activityDirty = true;
     render();
-    toast("Активность добавлена в дневной итог.");
+    toast("ÐÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚ÑŒ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð° Ð² Ð´Ð½ÐµÐ²Ð½Ð¾Ð¹ Ð¸Ñ‚Ð¾Ð³.");
   });
   $("#activity-reset").addEventListener("click", clearActivityInputs);
 
@@ -880,7 +824,7 @@ function bindEvents() {
   $("#active-date").addEventListener("change", async (event) => {
     const nextDate = event.target.value;
     if (!nextDate) return;
-    if ((menuDirty || activityDirty) && !confirm("Перейти к другой дате без сохранения текущих изменений?")) {
+    if ((menuDirty || activityDirty) && !confirm("ÐŸÐµÑ€ÐµÐ¹Ñ‚Ð¸ Ðº Ð´Ñ€ÑƒÐ³Ð¾Ð¹ Ð´Ð°Ñ‚Ðµ Ð±ÐµÐ· ÑÐ¾Ñ…Ñ€Ð°Ð½ÐµÐ½Ð¸Ñ Ñ‚ÐµÐºÑƒÑ‰Ð¸Ñ… Ð¸Ð·Ð¼ÐµÐ½ÐµÐ½Ð¸Ð¹?")) {
       event.target.value = activeDate;
       return;
     }
@@ -894,7 +838,7 @@ function bindEvents() {
 
   $("#import-button").addEventListener("click", importArchiveFromDrive);
   $("#export-button").addEventListener("click", exportCurrentDayToDrive);
-  $("#export-all-button").addEventListener("click", () => downloadJSON({ version: 1, exported_at: new Date().toISOString(), profile, records: allRecords() }, `Архив баланса ${todayISO()}.json`));
+  $("#export-all-button").addEventListener("click", () => downloadJSON({ version: 1, exported_at: new Date().toISOString(), profile, records: allRecords() }, `ÐÑ€Ñ…Ð¸Ð² Ð±Ð°Ð»Ð°Ð½ÑÐ° ${todayISO()}.json`));
 
   $("#chart-button").addEventListener("click", () => { $("#chart-dialog").showModal(); drawChart(); });
   $("#chart-period").addEventListener("change", drawChart);

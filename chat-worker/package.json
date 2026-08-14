@@ -1,0 +1,13 @@
+{
+  "name": "balance-codex-drive-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node worker.js",
+    "once": "node worker.js --once"
+  },
+  "dependencies": {
+    "googleapis": "^156.0.0"
+  }
+}
+
