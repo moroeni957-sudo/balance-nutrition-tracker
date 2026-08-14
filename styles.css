@@ -25,10 +25,10 @@ body {
   font-family: Manrope, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
-button, input, select { font: inherit; }
+button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button, select { cursor: pointer; }
-input, select { min-width: 0; }
+input, select, textarea { min-width: 0; }
 
 .site-header {
   position: sticky;
@@ -155,6 +155,21 @@ label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; 
 .result-strip strong { display: inline-block; margin-top: 4px; font-size: 18px; }
 .result-strip small { display: inline-block; margin-left: 3px; }
 
+.codex-chat { margin-top: 22px; padding: 24px; border: 1px solid #cbdcd2; border-radius: 20px; background: linear-gradient(145deg, #f7fbf8, #edf5ef); }
+.codex-chat-heading { display: flex; align-items: start; justify-content: space-between; gap: 18px; margin-bottom: 17px; }
+.codex-chat-heading .eyebrow { margin-bottom: 4px; font-size: 9px; }
+.codex-chat-heading h3 { margin: 0; font-size: 22px; letter-spacing: -.03em; }
+.codex-chat-status { padding: 6px 9px; border: 1px solid #bad0c1; border-radius: 999px; color: var(--green); background: rgba(255,255,255,.75); font-size: 9px; font-weight: 700; white-space: nowrap; }
+.codex-chat label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.codex-chat textarea { width: 100%; resize: vertical; min-height: 108px; padding: 14px 15px; border: 1px solid var(--line); border-radius: 14px; outline: 0; color: var(--ink); background: #fff; font-size: 14px; line-height: 1.55; transition: border-color .2s, box-shadow .2s; }
+.codex-chat textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(33,92,66,.1); }
+.codex-chat-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 10px; }
+.codex-chat-actions small { max-width: 380px; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.codex-chat-output { min-height: 108px; margin-top: 16px; padding: 15px; overflow-wrap: anywhere; border: 1px solid #d8e4db; border-radius: 14px; color: var(--ink); background: #fff; font-size: 13px; line-height: 1.65; white-space: pre-wrap; }
+.codex-chat-output > span { color: var(--muted); }
+.codex-chat-output.loading { color: var(--muted); }
+.codex-chat-output.error { color: #9b3d2c; border-color: #efc6bb; background: #fff8f6; }
+
 .daily-block { margin-top: 22px; padding: 24px; border-radius: 20px; background: #f4f7f2; }
 .daily-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
 .daily-heading .eyebrow { margin-bottom: 4px; font-size: 9px; }
@@ -266,6 +281,7 @@ fieldset legend { margin-bottom: 8px; }
   .nutrition-fields .portion-field { grid-column: auto; }
   .result-strip { grid-template-columns: repeat(2, 1fr); }
   .result-strip > p { grid-column: 1 / -1; }
+  .codex-chat textarea { font-size: 16px; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
   .activity-row { grid-template-columns: 40px minmax(0, 1fr) 44px 65px; }
   .inline-fields { grid-column: 2 / -1; grid-row: 2; }
@@ -299,6 +315,9 @@ fieldset legend { margin-bottom: 8px; }
   .form-actions .button { flex: 1; }
   .manual-row { align-items: stretch; flex-direction: column; }
   .daily-actions .button { width: 100%; }
+  .codex-chat-heading, .codex-chat-actions { align-items: stretch; flex-direction: column; }
+  .codex-chat-status { align-self: flex-start; }
+  .codex-chat-actions .button { width: 100%; }
   .chart-dialog { padding: 22px 14px; }
   .chart-controls { align-items: start; flex-direction: column; }
 }
