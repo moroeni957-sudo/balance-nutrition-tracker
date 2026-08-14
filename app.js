@@ -3,8 +3,6 @@
 const PROFILE_KEY = "balance.profile.v1";
 const RECORD_PREFIX = "balance.record.v1.";
 const WATER_GOAL_KEY = "balance.water.goal.v1";
-const CHAT_HISTORY_KEY = "balance.codex.history.v1";
-const CHAT_SESSION_KEY = "balance.codex.session.v1";
 const STEP_COEFFICIENT = 298 / (83 * 7072);
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -40,159 +38,10 @@ let toastTimer;
 let driveAccessToken = null;
 let driveTokenClient = null;
 let driveAuthPromise = null;
-let chatHistory = normalizeChatHistory(readJSON(CHAT_HISTORY_KEY));
 
 function readJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); }
   catch { return null; }
-}
-
-function normalizeChatHistory(candidate) {
-  if (!Array.isArray(candidate)) return [];
-  return candidate
-    .filter((item) => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
-    .map((item) => ({ role: item.role, content: item.content.slice(0, 2000) }))
-    .slice(-8);
-}
-
-function chatSessionId() {
-  let id = localStorage.getItem(CHAT_SESSION_KEY);
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem(CHAT_SESSION_KEY, id);
-  }
-  return id;
-}
-
-function chatEndpoint() {
-  const endpoint = window.BALANCE_CHAT_CONFIG?.endpoint;
-  return typeof endpoint === "string" ? endpoint.trim() : "";
-}
-
-function postQueueRequest(endpoint, payload) {
-  return new Promise((resolve) => {
-    const frameName = `codex-queue-${payload.request_id}`;
-    const frame = document.createElement("iframe");
-    const form = document.createElement("form");
-    const input = document.createElement("input");
-    frame.hidden = true;
-    frame.name = frameName;
-    form.hidden = true;
-    form.method = "POST";
-    form.action = endpoint;
-    form.target = frameName;
-    input.type = "hidden";
-    input.name = "payload";
-    input.value = JSON.stringify(payload);
-    form.append(input);
-    document.body.append(frame, form);
-    frame.addEventListener("load", () => {
-      setTimeout(() => {
-        form.remove();
-        frame.remove();
-      }, 1000);
-      resolve();
-    }, { once: true });
-    form.submit();
-    setTimeout(resolve, 2000);
-  });
-}
-
-function queueStatus(endpoint, requestId) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `balanceCodexStatus_${requestId.replaceAll("-", "_")}`;
-    const script = document.createElement("script");
-    const timer = setTimeout(() => finish(new Error("Сервис очереди не ответил вовремя.")), 15000);
-    function finish(error, value) {
-      clearTimeout(timer);
-      script.remove();
-      delete window[callbackName];
-      error ? reject(error) : resolve(value);
-    }
-    window[callbackName] = (data) => finish(null, data);
-    const url = new URL(endpoint);
-    url.searchParams.set("action", "status");
-    url.searchParams.set("request_id", requestId);
-    url.searchParams.set("callback", callbackName);
-    url.searchParams.set("_", String(Date.now()));
-    script.onerror = () => finish(new Error("Не удалось проверить ответ в очереди."));
-    script.src = url.toString();
-    document.head.append(script);
-  });
-}
-
-const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-async function waitForQueueAnswer(endpoint, requestId, output) {
-  const expiresAt = Date.now() + 15 * 60 * 1000;
-  let attempts = 0;
-  let missingAttempts = 0;
-  while (Date.now() < expiresAt) {
-    await wait(attempts === 0 ? 2500 : 8000);
-    attempts += 1;
-    const data = await queueStatus(endpoint, requestId);
-    if (!data?.ok) throw new Error(data?.error || "Сервис очереди вернул ошибку.");
-    if (data?.status === "completed" && typeof data.answer === "string") return data.answer.trim();
-    if (data?.status === "failed") throw new Error(data.error || "Codex не смог подготовить ответ.");
-    if (data?.status === "missing") {
-      missingAttempts += 1;
-      if (missingAttempts >= 2) {
-        throw new Error("Вопрос не был сохранён на Google Drive. Попробуйте отправить его ещё раз.");
-      }
-      output.textContent = "Проверяем сохранение вопроса на Google Drive…";
-      continue;
-    }
-    missingAttempts = 0;
-    output.textContent = data?.status === "processing"
-      ? "Ваш ПК получил вопрос. Codex готовит ответ…"
-      : "Вопрос сохранён на Google Drive и ждёт включённый локальный worker…";
-  }
-  throw new Error("Ответ пока не готов. Запустите worker на вашем ПК и отправьте вопрос ещё раз.");
-}
-
-async function sendCodexQuestion(event) {
-  event.preventDefault();
-  const input = $("#codex-chat-input");
-  const output = $("#codex-chat-output");
-  const button = $("#codex-chat-send");
-  const message = input.value.trim();
-  const endpoint = chatEndpoint();
-  if (!message) return;
-  if (!endpoint || endpoint.includes("PASTE_APPS_SCRIPT_URL")) {
-    output.className = "codex-chat-output error";
-    output.textContent = "Очередь вопросов ещё не подключена. Попробуйте позже.";
-    return;
-  }
-
-  button.disabled = true;
-  input.disabled = true;
-  output.className = "codex-chat-output loading";
-  output.textContent = "Сохраняем вопрос в очередь Google Drive…";
-  try {
-    const requestId = crypto.randomUUID();
-    await postQueueRequest(endpoint, {
-      action: "enqueue",
-      request_id: requestId,
-      session_id: chatSessionId(),
-      message,
-      history: chatHistory,
-      source: location.origin,
-    });
-    const answer = await waitForQueueAnswer(endpoint, requestId, output);
-    if (!answer) throw new Error("Codex не вернул текст ответа.");
-    chatHistory = [...chatHistory, { role: "user", content: message }, { role: "assistant", content: answer }].slice(-8);
-    localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(chatHistory));
-    output.className = "codex-chat-output";
-    output.textContent = answer;
-    input.value = "";
-  } catch (error) {
-    output.className = "codex-chat-output error";
-    output.textContent = error.message || "Не удалось получить ответ. Попробуйте ещё раз.";
-  } finally {
-    button.disabled = false;
-    input.disabled = false;
-    input.focus();
-  }
 }
 
 function numberFrom(value) {
@@ -909,8 +758,6 @@ function drawChart() {
 }
 
 function bindEvents() {
-  $("#codex-chat-form").addEventListener("submit", sendCodexQuestion);
-
   $("#water-goal").addEventListener("change", updateWaterGoal);
   $("#water-goal").addEventListener("keydown", (event) => {
     if (event.key === "Enter") { event.preventDefault(); updateWaterGoal(); }
