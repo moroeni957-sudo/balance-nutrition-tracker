@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#f5f7f2">
   <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
   <title>Баланс — питание и активность</title>
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
   <script src="food-database.js?v=6" defer></script>
-  <script src="app.js?v=20" defer></script>
+  <script src="app.js?v=21" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -24,6 +24,7 @@
       </span>
     </a>
     <nav class="header-actions" aria-label="Действия">
+      <button class="button button-danger header-reset-button" id="reset-period-button" type="button" title="Обнулить локальные данные за выбранный период"><span class="reset-label-long">Обнулить период</span><span class="reset-label-short">Сброс</span></button>
       <button class="button button-ghost" id="profile-button" type="button">Профиль</button>
       <button class="button button-ghost" id="import-button" type="button" title="Загрузить архив из Google Drive">Импорт</button>
       <button class="button button-dark" id="export-button" type="button" title="Сохранить выбранный день в Google Drive">Экспорт</button>
@@ -256,6 +257,24 @@
         <button class="button button-ghost food-show-more" id="food-show-more" type="button" hidden>Показать ещё</button>
       </section>
     </div>
+  </dialog>
+
+  <dialog id="reset-period-dialog" class="reset-period-dialog">
+    <form id="reset-period-form">
+      <button class="dialog-close" type="button" data-close="reset-period-dialog" aria-label="Закрыть">×</button>
+      <p class="eyebrow">Локальный архив</p>
+      <h2>Обнулить данные за период</h2>
+      <p class="muted" id="reset-period-description">Записи питания, активности и воды будут удалены из этого браузера и перестанут учитываться в графике. Файлы на Google Drive не изменятся.</p>
+      <div class="reset-period-fields">
+        <label><span>Дата от</span><input id="reset-period-from" type="date" required></label>
+        <label><span>Дата до</span><input id="reset-period-to" type="date" required></label>
+      </div>
+      <p class="form-error" id="reset-period-error" role="alert"></p>
+      <div class="reset-period-actions">
+        <button class="button button-ghost" type="button" data-close="reset-period-dialog">Отмена</button>
+        <button class="button button-danger" type="submit">Обнулить данные</button>
+      </div>
+    </form>
   </dialog>
 
   <dialog id="profile-dialog">

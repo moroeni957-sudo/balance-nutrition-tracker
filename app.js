@@ -3,6 +3,7 @@
 const PROFILE_KEY = "balance.profile.v1";
 const RECORD_PREFIX = "balance.record.v1.";
 const WATER_GOAL_KEY = "balance.water.goal.v1";
+const RESET_RANGES_KEY = "balance.resetRanges.v1";
 const STEP_COEFFICIENT = 298 / (83 * 7072);
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 const DRIVE_FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -122,6 +123,28 @@ function validRecord(candidate, fallbackDate) {
 
 function storageKey(date) { return `${RECORD_PREFIX}${date}`; }
 function hasStoredRecord(date) { return localStorage.getItem(storageKey(date)) !== null; }
+function isISODate(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date))) return false;
+  const parsed = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, "0")}-${String(parsed.getDate()).padStart(2, "0")}` === date;
+}
+function resetRanges() {
+  const saved = readJSON(RESET_RANGES_KEY);
+  if (!Array.isArray(saved)) return [];
+  return saved.filter((range) => isISODate(range?.from) && isISODate(range?.to) && range.from <= range.to);
+}
+function isResetDate(date) { return resetRanges().some((range) => range.from <= date && date <= range.to); }
+function rememberResetRange(from, to) {
+  const ranges = [...resetRanges(), { from, to }].sort((left, right) => left.from.localeCompare(right.from));
+  const merged = [];
+  for (const range of ranges) {
+    const previous = merged.at(-1);
+    if (previous && range.from <= previous.to) previous.to = previous.to > range.to ? previous.to : range.to;
+    else merged.push({ ...range });
+  }
+  localStorage.setItem(RESET_RANGES_KEY, JSON.stringify(merged));
+}
 function getStoredRecord(date) {
   const saved = readJSON(storageKey(date));
   if (!saved) return emptyRecord(date);
@@ -135,7 +158,7 @@ async function loadDate(date, tryRepository = false) {
   $("#active-date").value = date;
   $("#date-caption").textContent = date === todayISO() ? "Сегодня" : "Выбранная дата";
 
-  if (!hasStoredRecord(date) && tryRepository) {
+  if (!hasStoredRecord(date) && tryRepository && !isResetDate(date)) {
     try {
       const path = `График меню и активности/Меню и активность ${date}.json`;
       const response = await fetch(path);
@@ -839,6 +862,47 @@ function allRecords() {
   return records.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function openResetPeriod() {
+  $("#reset-period-from").value = activeDate;
+  $("#reset-period-to").value = activeDate;
+  $("#reset-period-error").textContent = "";
+  const dialog = $("#reset-period-dialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+async function resetPeriodData(event) {
+  event.preventDefault();
+  const from = $("#reset-period-from").value;
+  const to = $("#reset-period-to").value;
+  const error = $("#reset-period-error");
+  error.textContent = "";
+  if (!isISODate(from) || !isISODate(to)) {
+    error.textContent = "Выберите обе даты периода.";
+    return;
+  }
+  if (from > to) {
+    error.textContent = "Дата начала не может быть позже даты окончания.";
+    return;
+  }
+
+  const keys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+    .filter((key) => {
+      if (!key?.startsWith(RECORD_PREFIX)) return false;
+      const date = key.slice(RECORD_PREFIX.length);
+      return isISODate(date) && from <= date && date <= to;
+    });
+  const activeDateIncluded = from <= activeDate && activeDate <= to;
+  const message = `Обнулить локальные данные с ${displayDate(from)} по ${displayDate(to)} включительно?\n\nЗаписей в архиве: ${keys.length}. Файлы на Google Drive удалены не будут.`;
+  if (!confirm(message)) return;
+
+  keys.forEach((key) => localStorage.removeItem(key));
+  rememberResetRange(from, to);
+  if (activeDateIncluded) await loadDate(activeDate, false);
+  $("#reset-period-dialog").close();
+  if ($("#chart-dialog").open) drawChart();
+  toast(`Период ${displayDate(from)} — ${displayDate(to)} обнулён. Удалено записей: ${keys.length}.`);
+}
+
 async function importJSON(file) {
   try {
     const data = JSON.parse(await file.text());
@@ -1017,6 +1081,8 @@ function bindEvents() {
   });
 
   $("#profile-button").addEventListener("click", openProfile);
+  $("#reset-period-button").addEventListener("click", openResetPeriod);
+  $("#reset-period-form").addEventListener("submit", resetPeriodData);
   $("#profile-form").addEventListener("submit", saveProfile);
   $$('input[name="profile-mode"]').forEach((input) => input.addEventListener("change", (event) => setProfileMode(event.target.value)));
   $$('[data-close]').forEach((button) => button.addEventListener("click", () => $(`#${button.dataset.close}`).close()));

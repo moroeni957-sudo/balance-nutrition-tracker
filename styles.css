@@ -49,6 +49,7 @@ input, select, textarea { min-width: 0; }
 .brand strong { font-size: 16px; letter-spacing: -.02em; }
 .brand small { margin-top: 1px; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
 .header-actions { display: flex; gap: 8px; }
+.reset-label-short { display: none; }
 
 main { width: min(1500px, calc(100% - 40px)); margin: 0 auto; padding-bottom: 42px; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) 280px; align-items: end; gap: 44px; padding: clamp(52px, 7vw, 100px) clamp(4px, 2vw, 30px) 48px; }
@@ -204,10 +205,17 @@ footer p { margin: 0; }
 
 dialog { width: min(560px, calc(100% - 28px)); max-height: calc(100dvh - 28px); padding: 0; overflow-y: auto; border: 0; border-radius: 26px; color: var(--ink); background: var(--card); box-shadow: 0 35px 100px rgba(15,30,20,.28); }
 dialog::backdrop { background: rgba(18, 30, 23, .55); backdrop-filter: blur(5px); }
-#profile-dialog form { position: relative; padding: clamp(27px, 5vw, 45px); }
+#profile-dialog form, .reset-period-dialog form { position: relative; padding: clamp(27px, 5vw, 45px); }
 dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
 .muted { color: var(--muted); }
 .dialog-close { position: absolute; top: 18px; right: 18px; display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #fff; font-size: 22px; line-height: 1; }
+.reset-period-dialog { width: min(620px, calc(100% - 28px)); }
+.reset-period-dialog .muted { max-width: 470px; line-height: 1.65; }
+.reset-period-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+.reset-period-fields label > span { display: block; margin-bottom: 7px; color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.reset-period-fields input { width: 100%; height: 48px; padding: 0 13px; border: 1px solid var(--line); border-radius: 12px; outline: 0; color: var(--ink); background: #fff; font-size: 15px; font-weight: 700; }
+.reset-period-fields input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(33,92,66,.1); }
+.reset-period-actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 8px; }
 .food-catalog-dialog { width: min(1120px, calc(100% - 28px)); height: min(820px, calc(100dvh - 28px)); overflow: hidden; }
 .food-catalog-head { position: relative; padding: 27px 74px 18px 30px; border-bottom: 1px solid var(--line); }
 .food-catalog-head h2 { margin: 0 0 4px; }
@@ -293,6 +301,8 @@ fieldset legend { margin-bottom: 8px; }
   .brand small { display: none; }
   .header-actions { gap: 5px; }
   .header-actions .button { min-height: 44px; padding: 0 9px; font-size: 10px; }
+  .reset-label-long { display: none; }
+  .reset-label-short { display: inline; }
   main, footer { width: min(100% - 24px, 1500px); }
   .hero { grid-template-columns: 1fr; gap: 25px; padding: 45px 4px 30px; }
   h1 { font-size: clamp(48px, 16vw, 76px); }
@@ -353,6 +363,8 @@ fieldset legend { margin-bottom: 8px; }
   .daily-actions .button { width: 100%; }
   .chart-dialog { padding: 22px 14px; }
   .chart-controls { align-items: start; flex-direction: column; }
+  .reset-period-fields { grid-template-columns: 1fr; }
+  .reset-period-actions .button { flex: 1; padding-right: 8px; padding-left: 8px; }
 }
 
 @media (max-width: 350px) {
