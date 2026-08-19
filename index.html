@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#f5f7f2">
   <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
   <title>Баланс — питание и активность</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
   <script src="food-database.js?v=6" defer></script>
-  <script src="app.js?v=21" defer></script>
+  <script src="app.js?v=22" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -303,8 +303,9 @@
       <label>Период <select id="chart-period"><option value="7">1 неделя</option><option value="30">1 месяц</option><option value="90">3 месяца</option><option value="180">6 месяцев</option></select></label>
       <p id="chart-total">Баланс за период: <strong>0 ккал</strong></p>
     </div>
-    <div class="chart-canvas-wrap"><canvas id="balance-chart" width="900" height="420">График баланса калорий</canvas></div>
+    <div class="chart-canvas-wrap"><canvas id="balance-chart" width="900" height="420" aria-describedby="chart-hint" title="Нажмите на столбец, чтобы открыть этот день">График баланса калорий</canvas></div>
     <div class="chart-legend"><span><i class="green"></i>Профицит</span><span><i class="coral"></i>Дефицит</span></div>
+    <p class="chart-hint" id="chart-hint">Нажмите на столбец, чтобы открыть данные выбранного дня.</p>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

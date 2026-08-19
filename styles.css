@@ -278,10 +278,11 @@ fieldset legend { margin-bottom: 8px; }
 .chart-controls p { margin: 0; font-size: 13px; }
 .chart-controls strong { font-size: 18px; }
 .chart-canvas-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 15px; background: #fbfcfa; }
-#balance-chart { display: block; width: 100%; max-width: none; height: auto; }
+#balance-chart { display: block; width: 100%; max-width: none; height: auto; cursor: pointer; touch-action: manipulation; }
 .chart-legend { display: flex; gap: 18px; justify-content: center; margin-top: 13px; color: var(--muted); font-size: 10px; }
 .chart-legend i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; border-radius: 50%; }
 .chart-legend i.green { background: var(--green); }
+.chart-hint { margin: 8px 0 0; color: var(--muted); font-size: 10px; text-align: center; }
 
 .toast { position: fixed; z-index: 50; right: 22px; bottom: 22px; max-width: min(380px, calc(100% - 44px)); padding: 14px 18px; border-radius: 13px; color: #fff; background: var(--ink); box-shadow: 0 15px 40px rgba(0,0,0,.2); font-size: 12px; opacity: 0; transform: translateY(15px); pointer-events: none; transition: opacity .2s, transform .2s; }
 .toast.visible { opacity: 1; transform: translateY(0); }

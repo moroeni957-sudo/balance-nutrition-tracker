@@ -54,6 +54,7 @@ let driveTokenClient = null;
 let driveAuthPromise = null;
 let foodCatalogState = { level: "all", group: "", subgroup: "", query: "", visible: FOOD_PAGE_SIZE };
 let foodSearchTimer;
+let chartInteraction = null;
 
 function readJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); }
@@ -1000,6 +1001,29 @@ function drawChart() {
       context.fillText(`${day}.${month}`, x, plot.bottom + 20);
     }
   });
+  chartInteraction = { canvas, width, height, plot, history, slot };
+}
+
+function chartDateFromPointer(event) {
+  if (!chartInteraction || chartInteraction.canvas !== event.currentTarget) return null;
+  const { canvas, width, height, plot, history, slot } = chartInteraction;
+  const bounds = canvas.getBoundingClientRect();
+  if (!bounds.width || !bounds.height) return null;
+  const x = (event.clientX - bounds.left) * (width / bounds.width);
+  const y = (event.clientY - bounds.top) * (height / bounds.height);
+  if (x < plot.left || x > plot.right || y < plot.top || y > plot.bottom) return null;
+  const index = Math.min(history.length - 1, Math.max(0, Math.floor((x - plot.left) / slot)));
+  return history[index]?.date || null;
+}
+
+async function openChartDate(event) {
+  const date = chartDateFromPointer(event);
+  if (!date) return;
+  if ((menuDirty || activityDirty) && !confirm("Перейти к другой дате без сохранения текущих изменений?")) return;
+  $("#chart-dialog").close();
+  await loadDate(date, true);
+  $("#active-date").focus({ preventScroll: true });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function bindEvents() {
@@ -1093,6 +1117,7 @@ function bindEvents() {
 
   $("#chart-button").addEventListener("click", () => { $("#chart-dialog").showModal(); drawChart(); });
   $("#chart-period").addEventListener("change", drawChart);
+  $("#balance-chart").addEventListener("click", openChartDate);
   window.addEventListener("beforeunload", (event) => {
     if (!menuDirty && !activityDirty) return;
     event.preventDefault();
