@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#f5f7f2">
   <meta name="description" content="Калькулятор питания, активности и дневного баланса калорий">
   <title>Баланс — питание и активность</title>
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
-  <script src="food-database.js?v=12" defer></script>
-  <script src="app.js?v=26" defer></script>
+  <script src="food-database.js?v=14" defer></script>
+  <script src="app.js?v=28" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -124,6 +124,8 @@
             <label><span>Белки</span><span class="input-unit"><input id="food-proteins" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
             <label><span>Жиры</span><span class="input-unit"><input id="food-fats" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
             <label><span>Углеводы</span><span class="input-unit"><input id="food-carbs" inputmode="decimal" min="0" step="any" required><small>г</small></span></label>
+            <label><span>Сахара <small>(необязательно)</small></span><span class="input-unit"><input id="food-sugar" inputmode="decimal" min="0" step="any"><small>г</small></span></label>
+            <label><span>Соль <small>(необязательно)</small></span><span class="input-unit"><input id="food-salt" inputmode="decimal" min="0" step="any"><small>г</small></span></label>
             <label class="portion-field"><span>Размер порции</span><span class="input-unit"><input id="food-portion" inputmode="decimal" min="0.01" step="any" required><small>г</small></span></label>
           </div>
           <div class="form-actions">
@@ -133,13 +135,16 @@
           </div>
         </form>
 
-        <div class="result-strip" aria-live="polite">
-          <p>В порции</p>
-          <div><span>Калории</span><strong id="result-calories">—</strong><small>ккал</small></div>
-          <div><span>Белки</span><strong id="result-proteins">—</strong><small>г</small></div>
-          <div><span>Жиры</span><strong id="result-fats">—</strong><small>г</small></div>
-          <div><span>Углеводы</span><strong id="result-carbs">—</strong><small>г</small></div>
+          <div class="result-strip" aria-live="polite">
+            <p>В порции</p>
+            <div><span>Калории</span><strong id="result-calories">—</strong><small>ккал</small></div>
+            <div><span>Белки</span><strong id="result-proteins">—</strong><small>г</small></div>
+            <div><span>Жиры</span><strong id="result-fats">—</strong><small>г</small></div>
+            <div><span>Углеводы</span><strong id="result-carbs">—</strong><small>г</small></div>
+            <div><span>Сахара</span><strong id="result-sugar">—</strong><small>г</small></div>
+            <div><span>Соль</span><strong id="result-salt">—</strong><small>г</small></div>
         </div>
+        <p class="nutrition-data-note muted">Сахара и соль указаны на 100 г по данным источника продукта. Для USDA соль — эквивалент: опубликованный натрий (мг) × 2,5 / 1000. Прочерк означает, что источник не публикует значение.</p>
 
         <div class="daily-block">
           <div class="daily-heading"><div><p class="eyebrow">Накопительно</p><h3>Дневное меню</h3></div><span id="menu-save-state">Не сохранено</span></div>
@@ -148,6 +153,8 @@
             <div><span>Белки</span><strong id="daily-proteins">0</strong><small>г</small></div>
             <div><span>Жиры</span><strong id="daily-fats">0</strong><small>г</small></div>
             <div><span>Углеводы</span><strong id="daily-carbs">0</strong><small>г</small></div>
+            <div><span>Сахара</span><strong id="daily-sugar">0</strong><small>г</small></div>
+            <div><span>Соль</span><strong id="daily-salt">0</strong><small>г</small></div>
           </div>
           <button class="button button-ghost meals-open-button" id="meals-open" type="button">Приемы пищи</button>
           <div class="manual-row">
@@ -276,7 +283,7 @@
     <div class="meals-table-wrap">
       <table class="meals-table">
         <thead>
-          <tr><th>№</th><th>Название</th><th>Порция</th><th>Ккал</th><th>Белки</th><th>Жиры</th><th>Углеводы</th><th><span class="visually-hidden">Действия</span></th></tr>
+          <tr><th>№</th><th>Название</th><th>Порция</th><th>Ккал</th><th>Белки</th><th>Жиры</th><th>Углеводы</th><th>Сахара</th><th>Соль</th><th><span class="visually-hidden">Действия</span></th></tr>
         </thead>
         <tbody id="meals-table-body"></tbody>
       </table>

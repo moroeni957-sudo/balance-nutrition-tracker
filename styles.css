@@ -132,6 +132,7 @@ h1 em { color: var(--green); font-family: "Playfair Display", Georgia, serif; fo
 .nutrition-fields .food-name-field,
 .nutrition-fields .portion-field { grid-column: 1 / -1; }
 .food-name-field > span:first-child small { font-size: 9px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.nutrition-fields label > span:first-child small { font-size: 9px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .input-unit { display: flex; align-items: center; min-height: 52px; padding: 0 15px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfa; transition: border-color .2s, box-shadow .2s; }
 .input-unit:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(33,92,66,.1); }
@@ -156,12 +157,13 @@ label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; 
 .button-wide { width: 100%; margin-top: 8px; }
 .text-button { padding: 0; border: 0; border-bottom: 1px solid currentColor; background: transparent; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
-.result-strip { display: grid; grid-template-columns: .8fr repeat(4, 1fr); gap: 1px; margin-top: 28px; overflow: hidden; border-radius: 16px; background: var(--line); }
+.result-strip { display: grid; grid-template-columns: .8fr repeat(6, 1fr); gap: 1px; margin-top: 28px; overflow: hidden; border-radius: 16px; background: var(--line); }
 .result-strip > * { margin: 0; padding: 17px 13px; background: var(--sand); }
 .result-strip > p { display: grid; align-items: center; color: var(--green); font-size: 12px; font-weight: 700; }
 .result-strip span, .result-strip small { display: block; color: var(--muted); font-size: 9px; }
 .result-strip strong { display: inline-block; margin-top: 4px; font-size: 18px; }
 .result-strip small { display: inline-block; margin-left: 3px; }
+.nutrition-data-note { margin: 10px 0 0; font-size: 9px; line-height: 1.5; }
 
 .daily-block { margin-top: 22px; padding: 24px; border-radius: 20px; background: #f4f7f2; }
 .daily-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
@@ -169,7 +171,7 @@ label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; 
 .daily-heading h3 { margin: 0; font-size: 20px; }
 .daily-heading > span { color: var(--muted); font-size: 10px; }
 .daily-heading > span.saved { color: var(--green); }
-.metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.metric-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .metric-grid > div { padding: 14px 10px; border: 1px solid var(--line); border-radius: 13px; background: #fff; }
 .metric-grid span, .metric-grid small { display: block; color: var(--muted); font-size: 9px; }
 .metric-grid strong { display: inline-block; margin-top: 6px; font-size: 18px; }
@@ -253,7 +255,7 @@ dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
 .food-item-name strong, .food-item-name small { display: block; }
 .food-item-name strong { margin-bottom: 4px; font-size: 13px; }
 .food-item-name small { overflow: hidden; color: var(--muted); font-size: 9px; line-height: 1.4; text-overflow: ellipsis; white-space: nowrap; }
-.food-item-macros { display: grid; grid-template-columns: repeat(4, minmax(45px, auto)); gap: 9px; align-items: center; color: var(--muted); font-size: 8px; text-align: right; }
+.food-item-macros { display: grid; grid-template-columns: repeat(6, minmax(45px, auto)); gap: 9px; align-items: center; color: var(--muted); font-size: 8px; text-align: right; }
 .food-item-macros strong { display: block; color: var(--ink); font-size: 11px; }
 .food-badge { display: inline-block; margin-right: 6px; padding: 2px 5px; border-radius: 5px; color: var(--green); background: var(--green-soft); font-size: 7px; font-weight: 800; }
 .food-empty { padding: 50px 20px; color: var(--muted); text-align: center; }
@@ -263,7 +265,7 @@ dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
 .meals-dialog-head h2 { margin: 0 0 4px; }
 .meals-dialog-head p { margin-bottom: 0; }
 .meals-table-wrap { padding: 20px 24px 28px; overflow-x: auto; }
-.meals-table { width: 100%; min-width: 720px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.meals-table { width: 100%; min-width: 940px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .meals-table th, .meals-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
 .meals-table th { color: var(--muted); background: #f7f9f5; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
 .meals-table th:nth-child(2), .meals-table td:nth-child(2) { width: 100%; min-width: 220px; text-align: left; white-space: normal; }

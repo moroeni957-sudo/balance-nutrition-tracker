@@ -16,6 +16,8 @@ const MET = {
   strength: { "Лёгкая": 2, "Умеренная": 4, "Высокая": 6 },
 };
 const NUTRIENTS = ["calories", "proteins", "fats", "carbs"];
+const EXTRA_NUTRIENTS = ["sugar", "salt"];
+const ALL_NUTRIENTS = [...NUTRIENTS, ...EXTRA_NUTRIENTS];
 const FOOD_COLUMNS = window.FOOD_DATABASE?.columns || [];
 const FOOD_CATALOG = (window.FOOD_DATABASE?.foods || []).map((row) => {
   const food = Object.fromEntries(FOOD_COLUMNS.map((column, index) => [column, row[index]]));
@@ -38,7 +40,7 @@ const todayISO = () => {
 };
 const emptyRecord = (date) => ({
   date,
-  menu: { totals: { calories: 0, proteins: 0, fats: 0, carbs: 0 }, entries: [] },
+  menu: { totals: { calories: 0, proteins: 0, fats: 0, carbs: 0, sugar: 0, salt: 0 }, entries: [] },
   activity: { burned_calories: 0 },
   water: { goal_ml: savedWaterGoal(), consumed_ml: 0 },
 });
@@ -87,6 +89,10 @@ function format(value) {
   return new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(Math.round(value * 100) / 100);
 }
 
+function formatOptional(value) {
+  return value == null ? "—" : format(value);
+}
+
 function displayDate(iso) {
   const [year, month, day] = iso.split("-");
   return `${day}.${month}.${year}`;
@@ -102,6 +108,13 @@ function normalizeMealEntries(entries) {
       if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные КБЖУ приёма пищи");
       return [key, value];
     }));
+    const extraNutrients = Object.fromEntries(EXTRA_NUTRIENTS.map((key) => {
+      const raw = entry[key];
+      if (raw == null || raw === "") return [key, null];
+      const value = numberFrom(raw);
+      if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные значения сахара и соли");
+      return [key, value];
+    }));
     const rawPortion = entry.portion_g;
     const portion = rawPortion == null || rawPortion === "" ? null : numberFrom(rawPortion);
     if (portion !== null && (!Number.isFinite(portion) || portion <= 0)) throw new Error("Некорректная порция блюда");
@@ -110,6 +123,7 @@ function normalizeMealEntries(entries) {
       name: String(entry.name || "").trim().slice(0, 120),
       portion_g: portion,
       ...nutrients,
+      ...extraNutrients,
       added_at: addedAt,
     };
   });
@@ -128,6 +142,15 @@ function validRecord(candidate, fallbackDate) {
       if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные значения меню");
       return [key, value];
     }));
+    for (const key of EXTRA_NUTRIENTS) {
+      const raw = totalsSource[key];
+      if (raw == null || raw === "") totals[key] = null;
+      else {
+        const value = numberFrom(raw);
+        if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные значения сахара и соли в меню");
+        totals[key] = value;
+      }
+    }
     const entries = normalizeMealEntries(menuSource.entries);
     const burned = numberFrom(candidate.activity.burned_calories);
     if (!Number.isFinite(burned) || burned < 0) throw new Error("Некорректное значение активности");
@@ -206,6 +229,7 @@ async function loadDate(date, tryRepository = false) {
 
 function render() {
   for (const key of NUTRIENTS) $(`#daily-${key}`).textContent = format(record.menu.totals[key]);
+  for (const key of EXTRA_NUTRIENTS) $(`#daily-${key}`).textContent = formatOptional(record.menu.totals[key]);
   $("#daily-activity").textContent = format(record.activity.burned_calories);
   $("#balance-menu").textContent = format(record.menu.totals.calories);
   $("#balance-activity").textContent = format(record.activity.burned_calories);
@@ -430,6 +454,7 @@ function addMealEntry({ name = "", portion = null, nutrients }) {
     name: String(name).trim().slice(0, 120),
     portion_g: portion,
     ...Object.fromEntries(NUTRIENTS.map((key) => [key, nutrients[key]])),
+    ...Object.fromEntries(EXTRA_NUTRIENTS.map((key) => [key, nutrients[key] ?? null])),
     added_at: new Date().toISOString(),
   });
 }
@@ -443,6 +468,13 @@ function deleteMealEntry(index) {
   entries.splice(index, 1);
   for (const key of NUTRIENTS) {
     record.menu.totals[key] = Math.max(0, record.menu.totals[key] - entry[key]);
+  }
+  for (const key of EXTRA_NUTRIENTS) {
+    if (record.menu.totals[key] != null && entry[key] != null) {
+      record.menu.totals[key] = Math.max(0, record.menu.totals[key] - entry[key]);
+    } else {
+      record.menu.totals[key] = null;
+    }
   }
   menuDirty = true;
   render();
@@ -465,6 +497,8 @@ function renderMealEntries() {
       format(entry.proteins),
       format(entry.fats),
       format(entry.carbs),
+      formatOptional(entry.sugar),
+      formatOptional(entry.salt),
     ];
     row.append(...values.map((value) => {
       const cell = document.createElement("td");
@@ -502,6 +536,7 @@ function chooseCatalogFood(food) {
   $("#food-proteins").value = food.protein;
   $("#food-fats").value = food.fat;
   $("#food-carbs").value = food.carbs;
+  for (const key of EXTRA_NUTRIENTS) $(`#food-${key}`).value = food[key] == null ? "" : food[key];
   if (!$("#food-portion").value) $("#food-portion").value = "100";
   $("#selected-food-caption").textContent = `${food.name} · ${food.source} · значения на 100 г`;
   $("#food-catalog-dialog").close();
@@ -530,7 +565,7 @@ function renderFoodResults(items) {
     name.append(title, metadata);
     const macros = document.createElement("span");
     macros.className = "food-item-macros";
-    macros.append(macroNode(" ккал", food.kcal), macroNode(" Б", food.protein), macroNode(" Ж", food.fat), macroNode(" У", food.carbs));
+    macros.append(macroNode(" ккал", food.kcal), macroNode(" Б", food.protein), macroNode(" Ж", food.fat), macroNode(" У", food.carbs), macroNode(" сах", food.sugar), macroNode(" соль", food.salt));
     button.append(name, macros);
     button.addEventListener("click", () => chooseCatalogFood(food));
     return button;
@@ -573,6 +608,11 @@ function getPositive(selector, label, { allowZero = true, integer = false } = {}
   return value;
 }
 
+function getOptionalPositive(selector, label) {
+  if (!$(selector).value.trim()) return null;
+  return getPositive(selector, label);
+}
+
 function calculateNutrition(showError = true) {
   try {
     const base = {
@@ -580,10 +620,13 @@ function calculateNutrition(showError = true) {
       proteins: getPositive("#food-proteins", "Белки"),
       fats: getPositive("#food-fats", "Жиры"),
       carbs: getPositive("#food-carbs", "Углеводы"),
+      sugar: getOptionalPositive("#food-sugar", "Сахара"),
+      salt: getOptionalPositive("#food-salt", "Соль"),
     };
     const portion = getPositive("#food-portion", "Размер порции", { allowZero: false });
-    const result = Object.fromEntries(NUTRIENTS.map((key) => [key, base[key] * portion / 100]));
+    const result = Object.fromEntries(ALL_NUTRIENTS.map((key) => [key, base[key] == null ? null : base[key] * portion / 100]));
     for (const key of NUTRIENTS) $(`#result-${key}`).textContent = format(result[key]);
+    for (const key of EXTRA_NUTRIENTS) $(`#result-${key}`).textContent = formatOptional(result[key]);
     return result;
   } catch (error) {
     if (showError) toast(error.message, true);
@@ -639,9 +682,10 @@ function addManual(selector, type) {
     const value = getPositive(selector, type === "menu" ? "Калории" : "Энергозатраты", { allowZero: false });
     if (type === "menu") {
       record.menu.totals.calories += value;
+      for (const key of EXTRA_NUTRIENTS) record.menu.totals[key] = null;
       addMealEntry({
         name: "Калории вручную",
-        nutrients: { calories: value, proteins: 0, fats: 0, carbs: 0 },
+        nutrients: { calories: value, proteins: 0, fats: 0, carbs: 0, sugar: null, salt: null },
       });
       menuDirty = true;
     } else {
@@ -655,6 +699,7 @@ function addManual(selector, type) {
 
 function clearNutritionInputs() {
   for (const key of NUTRIENTS) $(`#result-${key}`).textContent = "—";
+  for (const key of EXTRA_NUTRIENTS) $(`#result-${key}`).textContent = "—";
   $("#food-name").value = "";
   $("#selected-food-caption").textContent = "Можно также заполнить КБЖУ вручную";
 }
@@ -1150,6 +1195,10 @@ function bindEvents() {
     const dishName = $("#food-name").value.trim();
     const portion = numberFrom($("#food-portion").value);
     for (const key of NUTRIENTS) record.menu.totals[key] += calculated[key];
+    for (const key of EXTRA_NUTRIENTS) {
+      if (record.menu.totals[key] == null || calculated[key] == null) record.menu.totals[key] = null;
+      else record.menu.totals[key] += calculated[key];
+    }
     addMealEntry({ name: dishName, portion, nutrients: calculated });
     menuDirty = true;
     render();
