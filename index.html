@@ -11,8 +11,8 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://apis.google.com/js/api.js" async defer></script>
   <script src="google-drive-config.js?v=3"></script>
-  <script src="food-database.js?v=6" defer></script>
-  <script src="app.js?v=22" defer></script>
+  <script src="food-database.js?v=9" defer></script>
+  <script src="app.js?v=23" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -238,7 +238,10 @@
 
   <dialog id="food-catalog-dialog" class="food-catalog-dialog">
     <div class="food-catalog-head">
-      <div><p class="eyebrow">База продуктов</p><h2>Выберите продукт</h2><p id="food-catalog-count" class="muted"></p></div>
+      <div>
+        <p class="eyebrow">База продуктов</p><h2>Выберите продукт</h2><p id="food-catalog-count" class="muted"></p>
+        <p class="food-source-note muted">Дополнительный источник: <a href="https://xn--65-6kc3bfr2e.xn--80acgfbsl1azdqr.xn--p1ai/?section_id=36" target="_blank" rel="noopener noreferrer">таблица калорийности школы №65</a>.</p>
+      </div>
       <button class="dialog-close" type="button" data-close="food-catalog-dialog" aria-label="Закрыть">×</button>
     </div>
     <div class="food-catalog-tools">

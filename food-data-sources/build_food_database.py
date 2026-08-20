@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import io
+import html
 import re
+import sys
 import unicodedata
 import zipfile
 from collections import defaultdict
@@ -16,10 +19,24 @@ ROOT = Path(__file__).resolve().parent
 RAW = ROOT / "raw"
 OUTPUT = ROOT.parent / "food-database.js"
 TRANSLATIONS_FILE = ROOT / "translations-en-ru.json"
+CURATED_FILE = ROOT / "curated-regional-foods.json"
 TRANSLATIONS = json.loads(TRANSLATIONS_FILE.read_text(encoding="utf-8")) if TRANSLATIONS_FILE.exists() else {}
 TRANSLATIONS_CASEFOLD = {key.casefold(): value for key, value in TRANSLATIONS.items()}
 BLS_FILE = RAW / "bls-4.0-2025-de" / "BLS_4_0_2025_DE" / "BLS_4_0_Daten_2025_DE.xlsx"
+HEALTH_DIET_FILE = RAW / "health-diet-offline-table.swf"
+SCHOOL65_FILE = RAW / "school65-calorie-table.html"
+SCHOOL65_URL = "https://xn--65-6kc3bfr2e.xn--80acgfbsl1azdqr.xn--p1ai/?section_id=36"
 NS = {"m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+
+HEALTH_DIET_BLOCKED_NAMES = {
+    "Грибы сушеные",  # в исходной офлайн-таблице ошибочно повторяет КБЖУ солёных грибов
+    "Горошек зеленый быстрозамороженный",  # фактически указаны значения сухого зерна
+    "Кукуруза, сахарная консервированная",  # фактически указаны значения сухого зерна
+    "Кукуруза, свежая в початках молочной спелости",  # фактически указаны значения сухого зерна
+    "Сметана, 36% жирности",  # жиры в исходной строке указаны как 30%
+    "Сметана, 40% жирности",  # жиры в исходной строке указаны как 30%
+    "Сыворотка подсырная",  # строка ошибочно повторяет состав кисломолочного напитка
+}
 
 GROUPS = {
     "Dairy and Egg Products": "Молочные продукты и яйца",
@@ -66,6 +83,87 @@ GROUP_KEYWORDS = (
     (("dish", "meal", "sandwich", "pizza", "burger"), "Готовые блюда"),
 )
 
+COMPOUND_NAMES = (
+    (r"\bbaby ?food\b|\bbaby meal\b", "Детское питание"),
+    (r"\btofu yogurt\b", "Соевый йогурт"),
+    (r"\bsoy ?milk\b.*\bchocolate\b|\bchocolate soy ?milk\b", "Шоколадное соевое молоко"),
+    (r"\bsoy ?milk\b", "Соевое молоко"), (r"\balmond milk\b", "Миндальное молоко"),
+    (r"\boat milk\b|\boat beverage\b", "Овсяный напиток"),
+    (r"\bsoybean, curd cheese\b|\bsoybean curd cheese\b", "Тофу"),
+    (r"\bmeatless.*\bfrankfurter\b|\bfrankfurter, meatless\b", "Растительная колбаса"),
+    (r"\bmeatballs?, meatless\b", "Растительные фрикадельки"),
+    (r"\bvegetarian meatloaf or patties\b", "Растительные котлеты"),
+    (r"\bsandwich spread, meatless\b", "Растительная бутербродная паста"),
+    (r"\bburritos?\b", "Буррито"), (r"\btacos?\b", "Тако"),
+    (r"\blasagna\b", "Лазанья"), (r"\bravioli\b", "Равиоли"),
+    (r"\benchiladas?\b", "Энчилада"), (r"\bquesadillas?\b", "Кесадилья"),
+    (r"\bsundae\b", "Десерт-мороженое"), (r"\bsmoothie\b", "Смузи"),
+    (r"\bmilkshake\b|\bmilk shake\b", "Молочный коктейль"),
+    (r"^fast foods?, biscuit\b", "Сэндвич на булочке"),
+    (r"^vegetables?.*\bfor soups?\b|^mixed vegetables?\b", "Овощная смесь"),
+    (r"^stewed fruits?\b", "Тушёные фрукты"),
+    (r"\boyster mushrooms?\b", "Вешенки"),
+    (r"\bduck eggs?\b", "Утиные яйца"), (r"\bgoose eggs?\b", "Гусиные яйца"),
+    (r"\bquail eggs?\b", "Перепелиные яйца"), (r"\bostrich eggs?\b", "Страусиные яйца"),
+    (r"\bturkey eggs?\b", "Индюшиные яйца"),
+    (r"\bchicken giblets?\b", "Куриные потроха"), (r"\bturkey giblets?\b", "Потроха индейки"),
+    (r"\bgoose fat\b|^fat, goose\b", "Гусиный жир"), (r"\bduck fat\b|^fat, duck\b", "Утиный жир"),
+    (r"\bpate\b|\bpâté\b", "Паштет"), (r"\bdressing\b", "Заправка"),
+    (r"\bterrine\b", "Террин"), (r"\btarts?\b", "Тарт"),
+    (r"\bgnocchi\b", "Ньокки"), (r"\bdumplings?\b", "Клёцки"),
+    (r"\bpatties?\b", "Котлеты"), (r"\bdip\b", "Закуска-соус"),
+    (r"\bmustard greens?\b", "Листовая горчица"), (r"\bsoybean curd\b", "Тофу"),
+    (r"\bfish oil\b", "Рыбий жир"), (r"\bchili with beans\b", "Чили с фасолью"),
+    (r"\begg rolls?\b", "Спринг-роллы"),
+    (r"^flour, bread\b", "Хлебная мука"), (r"^flour, pastry\b", "Кондитерская мука"),
+    (r"\bonion rings?\b", "Луковые кольца"), (r"^pickles?, cucumber\b", "Огурцы маринованные"),
+    (r"\bpeanut butter\b|\bpeanut spread\b", "Арахисовая паста"),
+    (r"\bapplesauce\b", "Яблочное пюре"), (r"\bpea puree\b", "Гороховое пюре"),
+    (r"\bmashed potatoes?\b", "Картофельное пюре"), (r"\bvegetable puree\b", "Овощное пюре"),
+    (r"\bradish seeds?, sprouted\b", "Ростки редиса"),
+    (r"\bmacaroni and cheese\b", "Макароны с сыром"), (r"\bnachos?\b", "Начос"),
+    (r"\bkielbasa\b", "Колбаса"), (r"\bbeef sticks?\b", "Мясные палочки из говядины"),
+    (r"\bpotato pockets?\b", "Картофельные кармашки с начинкой"),
+    (r"\bapple juice\b", "Яблочный сок"), (r"\borange juice\b", "Апельсиновый сок"),
+    (r"\btangerine juice\b|\bmandarin juice\b", "Мандариновый сок"),
+    (r"\bgrape juice\b", "Виноградный сок"), (r"\bpineapple juice\b", "Ананасовый сок"),
+    (r"\btomato juice\b", "Томатный сок"), (r"\bcranberry juice\b", "Клюквенный сок"),
+    (r"\bjuice\b", "Сок"),
+    (r"\bbarley flour\b", "Ячменная мука"), (r"\bbuckwheat flour\b", "Гречневая мука"),
+    (r"\boat flour\b", "Овсяная мука"), (r"\brye flour\b", "Ржаная мука"),
+    (r"\bwheat flour\b", "Пшеничная мука"), (r"\brice flour\b", "Рисовая мука"),
+    (r"\bcorn flour\b|\bcornmeal\b", "Кукурузная мука"),
+    (r"\bsoy flour\b", "Соевая мука"), (r"\bchickpea flour\b|\bbesan\b", "Нутовая мука"),
+    (r"\bsandwich\b", "Сэндвич"), (r"\bwrap\b", "Ролл с начинкой"),
+    (r"\bhamburger\b|\bcheeseburger\b", "Гамбургер"), (r"\bpizza\b", "Пицца"),
+    (r"\bsoup\b|\bchowder\b|\bbisque\b", "Суп"),
+    (r"\bsalad\b", "Салат"), (r"\bsauce\b|\bgravy\b", "Соус"),
+    (r"\bbroth\b|\bstock\b", "Бульон"), (r"\bstew\b", "Рагу"),
+    (r"\bcookies?\b|\bbiscuits?\b", "Печенье"), (r"\bcrackers?\b", "Крекеры"),
+    (r"\bbreadsticks?\b", "Хлебные палочки"), (r"\bpancakes?\b|\bcrepes?\b", "Блины"),
+    (r"\bwaffles?\b", "Вафли"), (r"\bmuffins?\b", "Маффины"),
+    (r"\bcroissants?\b", "Круассаны"), (r"\bcheesecake\b", "Чизкейк"),
+    (r"\bcake\b", "Торт"), (r"\bpie\b", "Пирог"), (r"\bpastry\b", "Выпечка"),
+    (r"\bdoughnuts?\b|\bdonuts?\b", "Пончики"), (r"\bcustard\b", "Заварной крем"),
+    (r"\bdessert\b", "Десерт"), (r"\bpudding\b", "Пудинг"),
+    (r"\bcand(?:y|ies)\b", "Конфеты"),
+    (r"\bice cream\b", "Мороженое"), (r"\bpopcorn\b", "Попкорн"),
+    (r"\bchips?\b|\bcrisps?\b", "Чипсы"), (r"\bpretzels?\b", "Крендельки"),
+    (r"\bnuggets?\b", "Наггетсы"), (r"\bcroquettes?\b", "Крокеты"),
+    (r"\bmeatballs?\b", "Мясные фрикадельки"),
+    (r"\bsausage\b|\bfrankfurter\b|\bsalami\b", "Колбаса"),
+)
+
+FEMININE_BASE_NAMES = {
+    "Фасоль", "Морковь", "Сельдь", "Форель", "Рыба-меч", "Гречневая крупа", "Овсяная крупа",
+    "Куриная голень", "Куриная печень", "Говяжья печень",
+}
+PLURAL_BASE_NAMES = {
+    "Макаронные изделия", "Креветки", "Мидии", "Устрицы", "Морские гребешки", "Грибы",
+    "Соевые бобы", "Семена подсолнечника",
+}
+MASCULINE_BASE_NAMES = {"Киви"}
+
 BASE_NAMES = (
     (r"buckwheat", "Гречневая крупа"), (r"brown rice", "Рис бурый"),
     (r"wild rice", "Рис дикий"), (r"\brice\b", "Рис"), (r"oatmeal|oat flakes|\boats?\b", "Овсяная крупа"),
@@ -94,28 +192,59 @@ BASE_NAMES = (
     (r"\bturkey\b", "Индейка"), (r"beef.*\bliver", "Говяжья печень"),
     (r"beef.*\b(ground|minced)\b", "Говяжий фарш"), (r"\bbeef\b", "Говядина"),
     (r"\bpork\b", "Свинина"), (r"\blamb\b", "Баранина"), (r"\bveal\b", "Телятина"),
-    (r"\begg", "Яйцо"), (r"salmon", "Лосось"), (r"tuna", "Тунец"),
-    (r"cod", "Треска"), (r"herring", "Сельдь"), (r"shrimp", "Креветки"),
+    (r"\begg", "Яйцо"), (r"burbot", "Налим"), (r"bluefish", "Луфарь"),
+    (r"catfish", "Сом"), (r"flounder|\bsole\b|flatfish", "Камбала"),
+    (r"grouper", "Групер"), (r"halibut", "Палтус"), (r"mahimahi", "Корифена"),
+    (r"monkfish", "Морской чёрт"), (r"ocean pout", "Бельдюга"),
+    (r"rockfish", "Морской окунь"), (r"sablefish", "Чёрная треска"),
+    (r"sea bass", "Морской окунь"), (r"snapper", "Луциан"),
+    (r"swordfish", "Рыба-меч"), (r"tilefish", "Кафельник"),
+    (r"whitefish", "Сиг"), (r"whiting", "Мерланг"), (r"wolffish", "Зубатка"),
+    (r"yellowtail", "Желтохвост"), (r"turbot", "Тюрбо"), (r"sturgeon", "Осётр"),
+    (r"mackerel", "Скумбрия"), (r"perch", "Окунь"), (r"\bpike\b", "Щука"),
+    (r"pollock", "Минтай"), (r"tilapia", "Тилапия"), (r"trout", "Форель"),
+    (r"salmon", "Лосось"), (r"tuna", "Тунец"), (r"\bcod\b", "Треска"),
+    (r"herring", "Сельдь"), (r"shrimp|prawn", "Креветки"),
+    (r"mussel", "Мидии"), (r"oyster", "Устрицы"), (r"scallop", "Морские гребешки"),
+    (r"squid|calamari", "Кальмар"), (r"lobster", "Омар"), (r"\bcrab\b", "Краб"),
+    (r"\bduck\b", "Утка"), (r"\bgoose\b", "Гусь"), (r"rabbit", "Кролик"),
+    (r"\bostrich\b", "Страус"), (r"\bemu\b", "Эму"),
     (r"potato", "Картофель"), (r"tomato", "Помидор"), (r"cucumber", "Огурец"),
     (r"carrot", "Морковь"), (r"cabbage", "Капуста"), (r"broccoli", "Брокколи"),
-    (r"spinach", "Шпинат"), (r"onion", "Лук"), (r"garlic", "Чеснок"),
-    (r"apple", "Яблоко"), (r"banana", "Банан"), (r"orange", "Апельсин"),
+    (r"cauliflower", "Цветная капуста"), (r"zucchini|courgette", "Кабачок"),
+    (r"pumpkin", "Тыква"), (r"eggplant|aubergine", "Баклажан"),
+    (r"beet", "Свёкла"), (r"radish", "Редис"), (r"turnip", "Репа"),
+    (r"celery", "Сельдерей"), (r"lettuce", "Салат латук"), (r"mushroom", "Грибы"),
+    (r"bell pepper|sweet pepper", "Сладкий перец"), (r"spinach", "Шпинат"),
+    (r"onion|chive|spring onion", "Лук"), (r"garlic", "Чеснок"),
+    (r"\bapple", "Яблоко"), (r"\bbanana", "Банан"), (r"\borange", "Апельсин"),
     (r"pear", "Груша"), (r"strawberr", "Клубника"), (r"blueberr", "Черника"),
     (r"raspberr", "Малина"), (r"grape", "Виноград"), (r"peach", "Персик"),
+    (r"apricot", "Абрикос"), (r"nectarine", "Нектарин"), (r"plum", "Слива"),
+    (r"sweet cherr|sour cherr|\bcherr", "Вишня"), (r"watermelon", "Арбуз"),
+    (r"\bmelon\b|cantaloupe", "Дыня"), (r"pineapple", "Ананас"), (r"mango", "Манго"),
+    (r"kiwi", "Киви"), (r"pomegranate", "Гранат"), (r"cranberr", "Клюква"),
+    (r"currant", "Смородина"), (r"grapefruit", "Грейпфрут"),
+    (r"tangerine|mandarin", "Мандарин"), (r"lemon", "Лимон"),
     (r"lentil", "Чечевица"), (r"chickpea", "Нут"), (r"\bbeans?\b", "Фасоль"),
-    (r"walnut", "Грецкий орех"), (r"almond", "Миндаль"), (r"peanut", "Арахис"),
+    (r"soybeans?", "Соевые бобы"), (r"\bpeas?\b", "Горох"),
+    (r"walnut", "Грецкий орех"), (r"almond", "Миндаль"), (r"cashew", "Кешью"), (r"peanut", "Арахис"),
     (r"sunflower seed", "Семена подсолнечника"), (r"olive oil", "Оливковое масло"),
     (r"sunflower oil", "Подсолнечное масло"), (r"\bbutter\b", "Сливочное масло"),
     (r"whole.?wheat bread|wholemeal bread", "Хлеб цельнозерновой"), (r"rye bread", "Хлеб ржаной"),
     (r"white bread", "Хлеб белый"), (r"\bbread\b", "Хлеб"),
+    (r"sugar-coated almonds", "Миндаль в сахарной глазури"),
+    (r"candies?, fudge, vanilla with nuts", "Сливочная помадка с ванилью и орехами"),
     (r"chocolate", "Шоколад"), (r"ice cream", "Мороженое"),
     (r"coffee", "Кофе"), (r"\btea\b", "Чай"), (r"^water\b|drinking water|mineral water", "Вода"),
+    (r"\bjuice\b", "Сок"), (r"mayonnaise", "Майонез"), (r"ketchup", "Кетчуп"),
+    (r"mustard", "Горчица"), (r"\bhoney\b", "Мёд"), (r"\bsugar\b", "Сахар"),
     (r"soup", "Суп"), (r"pizza", "Пицца"), (r"salad", "Салат"),
 )
 
 STATES = (
     (r"\braw\b|uncooked", ("сырой", "сырая", "сырое", "сырые")),
-    (r"\bdry\b|\bdried\b", ("сухой", "сухая", "сухое", "сухие")),
+    (r"\bdry\b(?!\s+heat)|\bdried\b", ("сухой", "сухая", "сухое", "сухие")),
     (r"\bboiled\b|cooked in water|parboiled, cooked", ("варёный", "варёная", "варёное", "варёные")),
     (r"steamed", ("на пару",) * 4),
     (r"baked|roasted", ("запечённый", "запечённая", "запечённое", "запечённые")),
@@ -127,8 +256,35 @@ STATES = (
     (r"fresh", ("свежий", "свежая", "свежее", "свежие")),
     (r"dehydrated", ("сушёный", "сушёная", "сушёное", "сушёные")),
     (r"braised|stewed", ("тушёный", "тушёная", "тушёное", "тушёные")),
-    (r"\bcooked\b|prepared", ("приготовленный", "приготовленная", "приготовленное", "приготовленные")),
+    (r"\bcooked\b|\bprepared\b|dry heat", ("приготовленный", "приготовленная", "приготовленное", "приготовленные")),
 )
+
+NAME_OVERRIDES = {
+    "Candies, fudge, vanilla with nuts": "Сливочная помадка с ванилью и орехами",
+    "Candies, sugar-coated almonds": "Миндаль в сахарной глазури",
+    "Candies, nougat, with almonds": "Нуга с миндалём",
+    "Candied almond or praline": "Миндаль в сахаре или пралине",
+    "Oil, apricot kernel": "Абрикосовое масло",
+    "Oil, mustard": "Горчичное масло",
+    "Oil, oat": "Овсяное масло",
+    "Oil, tomatoseed": "Масло из семян томата",
+    "Oil, soybean lecithin": "Масло соевого лецитина",
+    "Goose lard/fat": "Гусиный жир",
+}
+
+FORBIDDEN_NAME_FRAGMENTS = (
+    "мухляк", "сухая жара", "позиция ", "нфс", "не указано далее", "доказательств",
+    "бреад", "препаред", "фром", "кукед", "роастед", "фрайд", "дрй", "микс",
+    "чоколате", "кандиес", "алмондс", "сагар", "сугар", "филлед", "икинг",
+    "валнутс", "пеанут", "фоод", "хомемаде", "рекипе", "вит ", " анд ",
+)
+
+ALLOWED_TRANSLITERATED_WORDS = {
+    "pizza", "pasta", "yogurt", "kefir", "tofu", "miso", "tempeh", "hummus",
+    "falafel", "curry", "burger", "risotto", "lasagna", "taco", "burrito", "sushi",
+    "mozzarella", "ricotta", "feta", "brie", "camembert", "gouda", "parmesan",
+    "cheddar", "quinoa", "papad", "natto", "ramen", "kimchi", "granola",
+}
 
 BLS_GROUPS = {
     "B": "Хлеб и выпечка", "C": "Крупы и макароны", "D": "Хлеб и выпечка", "E": "Крупы и макароны",
@@ -204,32 +360,50 @@ def subgroup(group, description, source_subgroup=""):
 
 def translated_name(original):
     original = clean(original)
-    translated = TRANSLATIONS.get(original) or TRANSLATIONS_CASEFOLD.get(original.casefold())
-    if translated:
-        return translated
+    if original in NAME_OVERRIDES:
+        return NAME_OVERRIDES[original]
     lower = original.lower()
     if re.search(r"mock chicken|chicken flavored", lower):
-        return original.title() if original.isupper() else original
-    base = next((ru for pattern, ru in BASE_NAMES if re.search(pattern, lower)), "")
-    if not base:
-        return original.title() if original.isupper() else original
+        return ""
+    compound = next((ru for pattern, ru in COMPOUND_NAMES if re.search(pattern, lower)), "")
+    if compound:
+        return compound
+    base_matches = []
+    for priority, (pattern, russian) in enumerate(BASE_NAMES):
+        match = re.search(pattern, lower)
+        if match:
+            base_matches.append((match.start(), priority, russian))
+    first_match = min(base_matches) if base_matches else None
+    base = first_match[2] if first_match and first_match[0] <= 14 else ""
     if base == "Курица" and re.search(
         r"meatless|pot pie|salad|sandwich|soup|stock|broth|gravy|spread|patty|sausage|gumbo|giblets?|\bfeet\b|babyfood|^potatoes?\b|\bpesto\b|\bsauce\b|sweet and sour|bologna",
         lower,
     ):
-        return original.title() if original.isupper() else original
+        base = ""
+    if not base:
+        return ""
     last_word = base.split()[-1].lower()
-    form = 3 if last_word.endswith(("ы", "и", "ия")) else 2 if last_word.endswith(("о", "е")) else 1 if last_word.endswith(("а", "я", "ка", "ца")) else 0
+    form = 0 if base in MASCULINE_BASE_NAMES or base.startswith("Сыр ") else 3 if base in PLURAL_BASE_NAMES else 1 if base in FEMININE_BASE_NAMES else 3 if last_word.endswith(("ы", "и")) and not last_word.endswith("ия") else 2 if last_word.endswith(("о", "е")) else 1 if last_word.endswith(("а", "я")) else 0
     states = []
-    has_cooked_state = bool(re.search(r"boiled|steamed|baked|roasted|fried|grilled|smoked|braised|stewed|\bcooked\b|prepared", lower))
+    cooking_state_added = False
+    preservation_state_added = False
+    has_cooked_state = bool(re.search(r"boiled|steamed|baked|roasted|fried|grilled|smoked|braised|stewed|\bcooked\b|\bprepared\b", lower))
     for pattern, forms in STATES:
         if pattern == r"\braw\b|uncooked" and has_cooked_state:
             continue
-        if pattern == r"\bcooked\b|prepared" and states:
+        if "cooked" in pattern and states:
+            continue
+        is_cooking_state = bool(re.search(r"raw|boiled|steamed|baked|roasted|fried|grilled|smoked|braised|stewed|cooked|prepared", pattern))
+        is_preservation_state = bool(re.search(r"dry|dried|canned|frozen|fresh|dehydrated", pattern))
+        if is_cooking_state and cooking_state_added:
+            continue
+        if is_preservation_state and preservation_state_added:
             continue
         label = forms[form]
         if re.search(pattern, lower) and label not in states:
             states.append(label)
+            cooking_state_added = cooking_state_added or is_cooking_state
+            preservation_state_added = preservation_state_added or is_preservation_state
     return f"{base}, {', '.join(states)}" if states else base
 
 
@@ -386,7 +560,7 @@ def read_branded(candidate_limit=35000):
 
 
 def normalized_key(item):
-    return re.sub(r"[^a-z0-9]+", " ", item["original"].lower()).strip()
+    return re.sub(r"[^a-zа-яё0-9]+", " ", item["original"].lower()).strip()
 
 
 def translated_display_key(item):
@@ -441,6 +615,311 @@ def russian_qualifier(value):
     return re.sub(r"\s+", " ", "".join(converted)).strip(" ,.;-—")
 
 
+def contains_transliterated_english(name, original):
+    russian_tokens = set(re.findall(r"[а-яё]+", name.casefold()))
+    for word in re.findall(r"[a-z]+", original.casefold()):
+        if len(word) < 4 or word in ALLOWED_TRANSLITERATED_WORDS:
+            continue
+        transliterated = russian_qualifier(word).casefold()
+        if len(transliterated) >= 4 and transliterated in russian_tokens:
+            return True
+    return False
+
+
+def valid_macros(item):
+    values = [item[key] for key in ("kcal", "protein", "fat", "carbs")]
+    if any(value is None or not isinstance(value, (int, float)) for value in values):
+        return False
+    kcal, protein, fat, carbs = values
+    if not (0 <= kcal <= 950 and 0 <= protein <= 100 and 0 <= fat <= 100 and 0 <= carbs <= 100):
+        return False
+    if protein + fat + carbs > 105:
+        return False
+    if item.get("source") == "МЗР — официальная офлайн-таблица" and item.get("subgroup") == "Алкогольные напитки":
+        return True
+    calculated = protein * 4 + fat * 9 + carbs * 4
+    if calculated == 0 and kcal > 20:
+        return False
+    return abs(kcal - calculated) <= max(170, kcal * 0.55)
+
+
+def quality_item(item):
+    name = clean(item.get("name"))
+    if not name or len(name) > 110 or not re.search(r"[а-яё]", name, re.IGNORECASE):
+        return False
+    if re.search(r"[a-z]", name, re.IGNORECASE):
+        return False
+    lowered = f" {name.casefold()} "
+    if any(fragment in lowered for fragment in FORBIDDEN_NAME_FRAGMENTS):
+        return False
+    if contains_transliterated_english(name, item.get("original", "")):
+        return False
+    return valid_macros(item)
+
+
+def read_curated():
+    if not CURATED_FILE.exists():
+        return []
+    entries = json.loads(CURATED_FILE.read_text(encoding="utf-8"))
+    result = []
+    for index, entry in enumerate(entries, 1):
+        protein = round(float(entry["protein"]), 2)
+        fat = round(float(entry["fat"]), 2)
+        carbs = round(float(entry["carbs"]), 2)
+        kcal = round(protein * 4 + fat * 9 + carbs * 4)
+        aliases = clean(entry.get("aliases", ""))
+        original = entry["name"] if not aliases else f'{entry["name"]}; {aliases}'
+        result.append({
+            "id": f"regional-{index:03d}", "level": 2,
+            "group": entry["group"], "subgroup": entry["subgroup"],
+            "name": entry["name"], "original": original,
+            "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs,
+            "source": "Среднее по типовой рецептуре",
+        })
+    return result
+
+
+def health_diet_group(category):
+    lowered = category.casefold().replace("ё", "е")
+    rules = (
+        (("алкоголь", "вода", "сок", "компот", "экстракт"), "Напитки"),
+        (("мяс", "птиц", "субпродукт", "колбас", "сардель", "сосиск", "полуфабрикат"), "Мясо и птица"),
+        (("рыб", "икра", "нерыбных объектов"), "Рыба и морепродукты"),
+        (("молоч", "сыр", "морожен"), "Молочные продукты и яйца"),
+        (("круп", "зерн", "макарон", "мука", "крахмал"), "Крупы и макароны"),
+        (("хлеб",), "Хлеб и выпечка"),
+        (("овощ", "трава", "гриб"), "Овощи"),
+        (("фрукт", "ягод"), "Фрукты и ягоды"),
+        (("орех", "семен"), "Орехи и семена"),
+        (("зернобоб",), "Бобовые"),
+        (("жир", "масло"), "Масла и жиры"),
+        (("кондитер", "варенье"), "Сладости"),
+        (("специ", "приправ", "соус", "сырье", "сырьё"), "Специи и травы"),
+    )
+    for markers, group in rules:
+        if any(marker in lowered for marker in markers):
+            return group
+    return "Прочие продукты"
+
+
+def health_diet_level(category):
+    lowered = category.casefold().replace("ё", "е")
+    extended_markers = (
+        "варенье", "консерв", "пресерв", "полуфабрикат", "колбас", "сардель", "сосиск",
+        "кондитер", "морожен", "копчен", "солен", "вялен", "компот", "соус", "напитк",
+    )
+    return 2 if any(marker in lowered for marker in extended_markers) else 1
+
+
+def health_diet_name(value):
+    value = html.unescape(clean(value))
+    replacements = {
+        "Ликер Вишневый»": "Ликёр «Вишнёвый»",
+        "сгущёном": "сгущённом",
+        "сгущеном": "сгущённом",
+        "Подберезовик": "Подберёзовик",
+        "Подберезовики": "Подберёзовики",
+        "топленое": "топлёное",
+        "соленый": "солёный",
+        "соленая": "солёная",
+        "соленое": "солёное",
+        "сушеный": "сушёный",
+        "сушеная": "сушёная",
+        "сушеное": "сушёное",
+    }
+    for source, target in replacements.items():
+        value = value.replace(source, target)
+    value = {
+        "Абрикосы": "Абрикос",
+        "Баклажаны": "Баклажан",
+        "Яблоки": "Яблоко",
+    }.get(value, value)
+    return value
+
+
+def read_health_diet_offline():
+    """Read the official downloadable offline table without executing its Flash projector."""
+    if not HEALTH_DIET_FILE.exists():
+        return []
+    text = HEALTH_DIET_FILE.read_bytes().decode("utf-8", errors="ignore")
+    category_pattern = re.compile(
+        r"<node label='(?P<category>[^']+)'>(?P<items>(?:<node label='[^']+' k='[^']*' b='[^']*' f='[^']*' u='[^']*'></node>)+)</node>"
+    )
+    item_pattern = re.compile(
+        r"<node label='(?P<name>[^']+)' k='(?P<kcal>[^']*)' b='(?P<protein>[^']*)' f='(?P<fat>[^']*)' u='(?P<carbs>[^']*)'></node>"
+    )
+    result = []
+    index = 0
+    for category_match in category_pattern.finditer(text):
+        category = health_diet_name(category_match.group("category"))
+        group = health_diet_group(category)
+        level = health_diet_level(category)
+        for match in item_pattern.finditer(category_match.group("items")):
+            index += 1
+            raw_name = html.unescape(clean(match.group("name")))
+            name = health_diet_name(raw_name)
+            if raw_name in HEALTH_DIET_BLOCKED_NAMES or not match.group("kcal"):
+                continue
+            try:
+                kcal = round(float(match.group("kcal")), 2)
+                protein = round(float(match.group("protein") or 0), 2)
+                fat = round(float(match.group("fat") or 0), 2)
+                carbs = round(float(match.group("carbs") or 0), 2)
+            except ValueError:
+                continue
+            if not (0 <= kcal <= 950 and 0 <= protein <= 100 and 0 <= fat <= 100 and 0 <= carbs <= 100):
+                continue
+            if protein + fat + carbs > 105:
+                continue
+            calculated = protein * 4 + fat * 9 + carbs * 4
+            is_alcohol = "алкоголь" in category.casefold() or any(
+                marker in name.casefold() for marker in ("водка", "коньяк", "вино", "ликёр", "наливка", "настойка", "пиво")
+            )
+            if not is_alcohol and abs(kcal - calculated) > max(70, kcal * 0.30):
+                continue
+            result.append({
+                "id": f"health-diet-{index:04d}", "level": level,
+                "group": group, "subgroup": category,
+                "name": name, "original": name,
+                "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs,
+                "source": "МЗР — официальная офлайн-таблица",
+            })
+    return result
+
+
+SCHOOL65_GROUPS = {
+    "Напитки": "Напитки",
+    "Грибы": "Овощи",
+    "Икра": "Рыба и морепродукты",
+    "Каши": "Крупы и макароны",
+    "Колбаса и колбасные изделия": "Мясо и птица",
+    "Масло, маргарин, жиры": "Масла и жиры",
+    "Молочные продукты": "Молочные продукты и яйца",
+    "Мясо, птица": "Мясо и птица",
+    "Овощи": "Овощи",
+    "Орехи, сухофрукты": "Орехи и семена",
+    "Рыба и морепродукты": "Рыба и морепродукты",
+    "Сладости": "Сладости",
+    "Фрукты и ягоды": "Фрукты и ягоды",
+    "Хлеб и хлебобулочные изделия, мука": "Хлеб и выпечка",
+    "Яйца": "Молочные продукты и яйца",
+}
+
+SCHOOL65_BLOCKED_NAMES = {
+    # Название не объясняет, что приведены значения сухого порошка, а не напитка.
+    "Какао на молоке",
+    # Углеводы и калорийность противоречат типичному сладкому сгущённому молоку.
+    "Молоко сгущенное",
+    # Явные опечатки в строках: БЖУ не соответствуют продукту или калорийности.
+    "Крабовые палочки",
+    "Печенье сдобное",
+    "Плотва",
+    # Русский синоним скумбрии уже есть в старом каталоге отдельной строкой.
+    "Макрель",
+}
+
+
+def school65_name(value, category):
+    value = html.unescape(re.sub(r"<[^>]+>", " ", value))
+    value = clean(value).replace("&nbsp;", " ")
+    replacements = {
+        "Вишневый": "Вишнёвый", "сушеные": "сушёные", "Сушеные": "Сушёные",
+        "сушеный": "сушёный", "сушенные": "сушёные",
+        "вареный": "варёный", "Вареный": "Варёный", "вареная": "варёная",
+        "вареные": "варёные", "копченая": "копчёная", "копченые": "копчёные",
+        "топленое": "топлёное", "топленый": "топлёный", "сгущенное": "сгущённое",
+        "сгущенным": "сгущённым", "слоеное": "слоёное", "Зеленый": "Зелёный",
+        "зеленый": "зелёный", "Черный": "Чёрный", "черная": "чёрная",
+        "темный": "тёмный",
+        "Подберезовики": "Подберёзовики", "Красноперка": "Краснопёрка",
+        "Осетр": "Осётр", "Семга": "Сёмга", "Мед": "Мёд",
+    }
+    for source, target in replacements.items():
+        value = value.replace(source, target)
+    exact = {
+        "Белые свежие": "Белые грибы, свежие",
+        "Белые сушёные": "Белые грибы, сушёные",
+        "Ледяная": "Ледяная рыба",
+        "Куры": "Курица",
+        "Гуси": "Гусь",
+        "Утки": "Утка",
+        "Цыплята": "Цыплёнок",
+        "Абрикосы": "Абрикос",
+        "Баклажаны": "Баклажан",
+        "Бананы": "Банан",
+        "Кабачки": "Кабачок",
+        "Яблоки": "Яблоко",
+        "Памело": "Помело",
+        "Кровянка": "Кровяная колбаса",
+        "Салат": "Салат листовой",
+        "Фасоль": "Фасоль стручковая",
+        "Бобы": "Бобы свежие",
+    }
+    value = exact.get(value, value)
+    value = re.sub(
+        r"(?<=\s)(Почки|Печень|Сердце|Мозги|Вымя|Язык|Говяжьи|Свиные|Куриные|Любительские|Молочные)(?=\b)",
+        lambda match: match.group(0).lower(),
+        value,
+    )
+    if category == "Грибы" and value in {"Волнушки", "Лисички", "Маслята", "Опята", "Рыжики"}:
+        value += ", грибы"
+    return value
+
+
+def read_school65_table():
+    """Read the school table whose footer permits reuse with an active source link."""
+    if not SCHOOL65_FILE.exists():
+        return []
+    text = SCHOOL65_FILE.read_text(encoding="utf-8", errors="ignore")
+    section_pattern = re.compile(
+        r"<h3[^>]*>(?P<category>.*?)</h3>\s*<table[^>]*>(?P<table>.*?)</table>",
+        re.IGNORECASE | re.DOTALL,
+    )
+    row_pattern = re.compile(r"<tr[^>]*>(?P<row>.*?)</tr>", re.IGNORECASE | re.DOTALL)
+    cell_pattern = re.compile(r"<t[dh][^>]*>(?P<cell>.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
+    result = []
+    index = 0
+    for section in section_pattern.finditer(text):
+        category = html.unescape(re.sub(r"<[^>]+>", " ", section.group("category")))
+        category = clean(category)
+        group = SCHOOL65_GROUPS.get(category)
+        if not group:
+            continue
+        for row in row_pattern.finditer(section.group("table")):
+            cells = [html.unescape(re.sub(r"<[^>]+>", " ", match.group("cell"))) for match in cell_pattern.finditer(row.group("row"))]
+            if len(cells) != 5 or clean(cells[0]).casefold() == "продукт":
+                continue
+            index += 1
+            raw_name = clean(cells[0])
+            if raw_name in SCHOOL65_BLOCKED_NAMES:
+                continue
+            values = [number(cell) for cell in cells[1:]]
+            if any(value is None for value in values):
+                continue
+            protein, fat, carbs, kcal = (round(value, 2) for value in values)
+            if not (0 <= kcal <= 950 and 0 <= protein <= 100 and 0 <= fat <= 100 and 0 <= carbs <= 100):
+                continue
+            if protein + fat + carbs > 105:
+                continue
+            calculated = protein * 4 + fat * 9 + carbs * 4
+            # Этот небольшой справочник содержит несколько явных опечаток. Для нового
+            # источника используем более строгую проверку, чем для больших официальных баз.
+            if calculated == 0 and kcal > 10:
+                continue
+            if abs(kcal - calculated) > max(35, kcal * 0.18):
+                continue
+            name = school65_name(raw_name, category)
+            result.append({
+                "id": f"school65-{index:03d}", "level": 2,
+                "group": group, "subgroup": category,
+                "name": name, "original": raw_name,
+                "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs,
+                "source": "Школа №65 — таблица калорийности",
+                "sourceUrl": SCHOOL65_URL,
+            })
+    return result
+
+
 def balanced_take(items, limit, seen):
     buckets = defaultdict(list)
     for item in items:
@@ -483,13 +962,27 @@ def required_take(items, patterns, seen):
     return picked
 
 
-def main():
-    foundation = read_usda("usda-foundation-2026-04-30-json.zip", "FoundationFoods", "USDA Foundation", 1)
-    legacy = read_usda("usda-sr-legacy-2018-04-json.zip", "SRLegacyFoods", "USDA SR", 1)
+def main(public_build=False, output_path=OUTPUT):
+    raw_foundation = read_usda("usda-foundation-2026-04-30-json.zip", "FoundationFoods", "USDA Foundation", 1)
+    raw_legacy = read_usda("usda-sr-legacy-2018-04-json.zip", "SRLegacyFoods", "USDA SR", 1)
+    raw_fndds = read_usda("usda-fndds-2021-2023-json.zip", "SurveyFoods", "USDA FNDDS", 2)
+    raw_ciqual = read_ciqual()
+    raw_bls = read_bls()
+    # Even for a public build the local MZR table may participate in collision
+    # filtering. Its rows are removed from the final payload below, so public
+    # output cannot expose them or resurrect a lower-priority dubious value.
+    raw_health_diet = read_health_diet_offline()
+    raw_school65 = read_school65_table()
+
+    foundation = [item for item in raw_foundation if quality_item(item)]
+    legacy = [item for item in raw_legacy if quality_item(item)]
     legacy = [item for item in legacy if not re.search(r"\b[A-Z]{3,}\b", item["original"])]
-    fndds = read_usda("usda-fndds-2021-2023-json.zip", "SurveyFoods", "USDA FNDDS", 2)
-    ciqual = read_ciqual()
-    bls = read_bls()
+    fndds = [item for item in raw_fndds if quality_item(item)]
+    ciqual = [item for item in raw_ciqual if quality_item(item)]
+    bls = [item for item in raw_bls if quality_item(item)]
+    curated = [item for item in read_curated() if quality_item(item)]
+    health_diet = [item for item in raw_health_diet if quality_item(item)]
+    school65 = [item for item in raw_school65 if quality_item(item)]
 
     seen = set()
     level_one = balanced_take(foundation, len(foundation), seen)
@@ -513,15 +1006,12 @@ def main():
     ), seen)
     level_one += balanced_take(legacy, 1600 - len(level_one), seen)
     extended_legacy = [{**item, "level": 2} for item in legacy]
-    level_two = []
+    level_two = curated[:]
     for pool in (bls, ciqual, extended_legacy, fndds):
         level_two += balanced_take(pool, len(pool), seen)
-
-    target_total = 30000
-    branded = read_branded(60000)
-    remaining = max(0, target_total - len(level_one) - len(level_two))
-    level_two += balanced_take(branded, remaining, seen)
-    selected = sorted(level_one + level_two, key=lambda item: (item["level"], item["group"], item["subgroup"], item["name"], item["original"]))
+    # Existing local records keep priority. The newly added school table is appended
+    # last, so a colliding normalized Russian display name can never replace one.
+    selected = health_diet + level_one + level_two + school65
     foods = []
     translated_seen = set()
     for item in selected:
@@ -529,36 +1019,46 @@ def main():
         if not key:
             continue
         if key in translated_seen:
-            parts = [clean(part) for part in item["original"].split(",") if clean(part)]
-            candidates = []
-            for width in range(1, min(len(parts), 4) + 1):
-                qualifier = russian_qualifier(", ".join(parts[:width]))
-                if qualifier:
-                    candidates.append(f'{item["name"]} — {qualifier}')
-            candidates.append(f'{item["name"]} — позиция {re.sub(r"[^0-9]", "", item["id"])[-9:]}')
-            for candidate in candidates:
-                candidate_item = {**item, "name": candidate}
-                candidate_key = translated_display_key(candidate_item)
-                if candidate_key not in translated_seen:
-                    item = candidate_item
-                    key = candidate_key
-                    break
+            continue
         translated_seen.add(key)
         foods.append(item)
+    if public_build:
+        foods = [item for item in foods if item["source"] != "МЗР — официальная офлайн-таблица"]
+    foods.sort(key=lambda item: (item["level"], item["group"], item["subgroup"], item["name"], item["original"]))
 
-    compact = [[item[key] for key in ("id", "level", "group", "subgroup", "name", "original", "kcal", "protein", "fat", "carbs", "source")] for item in foods]
+    columns = ("id", "level", "group", "subgroup", "name", "original", "kcal", "protein", "fat", "carbs", "source", "sourceUrl")
+    compact = [[item.get(key, "") for key in columns] for item in foods]
     payload = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
+    local_notice = " LOCAL-ONLY: includes the MZR offline table; do not publish this generated file."
+    database_version = "2026-08-20-local-mzr-school65" if health_diet and school65 else "2026-08-20-local-mzr" if health_diet else "2026-08-20-public-school65" if school65 else "2026-08-20-public"
     script = (
-        "/* Generated from USDA FoodData Central and Anses-CIQUAL 2025. */\n"
-        "window.FOOD_DATABASE={version:\"2026-08-14\",columns:[\"id\",\"level\",\"group\",\"subgroup\",\"name\",\"original\",\"kcal\",\"protein\",\"fat\",\"carbs\",\"source\"],foods:"
+        "/* Generated from USDA FoodData Central, Anses-CIQUAL 2025, BLS 4.0 and curated regional recipes."
+        + (local_notice if health_diet and not public_build else "") + " */\n"
+        "window.FOOD_DATABASE={version:" + json.dumps(database_version) + ",columns:" + json.dumps(columns, ensure_ascii=False, separators=(",", ":")) + ",foods:"
         + payload + "};\n"
     )
-    OUTPUT.write_text(script, encoding="utf-8")
+    output_path = Path(output_path).resolve()
+    output_path.write_text(script, encoding="utf-8")
     source_counts = defaultdict(int)
     for item in foods:
         source_counts[item["source"]] += 1
-    print(json.dumps({"level1": len(level_one), "level2": len(level_two), "total": len(foods), "bytes": OUTPUT.stat().st_size, "sources": source_counts}, ensure_ascii=False))
+    rejected = {
+        "USDA Foundation": len(raw_foundation) - len(foundation),
+        "USDA SR": len(raw_legacy) - len(legacy),
+        "USDA FNDDS": len(raw_fndds) - len(fndds),
+        "CIQUAL": len(raw_ciqual) - len(ciqual),
+        "BLS 4.0": len(raw_bls) - len(bls),
+        "МЗР — официальная офлайн-таблица": len(raw_health_diet) - len(health_diet),
+        "Школа №65 — таблица калорийности": len(raw_school65) - len(school65),
+    }
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    print(json.dumps({"level1": sum(item["level"] == 1 for item in foods), "level2": sum(item["level"] == 2 for item in foods), "total": len(foods), "bytes": output_path.stat().st_size, "output": str(output_path), "public": public_build, "sources": source_counts, "rejected": rejected}, ensure_ascii=False))
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--public", action="store_true", help="Exclude sources without confirmed redistribution rights")
+    parser.add_argument("--output", type=Path, default=OUTPUT, help="Generated JavaScript file")
+    arguments = parser.parse_args()
+    main(public_build=arguments.public, output_path=arguments.output)

@@ -422,12 +422,12 @@ function renderFoodResults(items) {
     name.className = "food-item-name";
     const title = document.createElement("strong");
     title.textContent = food.name;
-    const original = document.createElement("small");
+    const metadata = document.createElement("small");
     const badge = document.createElement("span");
     badge.className = "food-badge";
     badge.textContent = `Уровень ${food.level}`;
-    original.append(badge, document.createTextNode(`${food.original} · ${food.source}`));
-    name.append(title, original);
+    metadata.append(badge, document.createTextNode(`${food.source} · значения на 100 г`));
+    name.append(title, metadata);
     const macros = document.createElement("span");
     macros.className = "food-item-macros";
     macros.append(macroNode(" ккал", food.kcal), macroNode(" Б", food.protein), macroNode(" Ж", food.fat), macroNode(" У", food.carbs));
