@@ -674,7 +674,7 @@ def read_curated():
             "group": entry["group"], "subgroup": entry["subgroup"],
             "name": entry["name"], "original": original,
             "kcal": kcal, "protein": protein, "fat": fat, "carbs": carbs,
-            "source": "Среднее по типовой рецептуре",
+            "source": entry.get("source", "Среднее по типовой рецептуре"),
         })
     return result
 
