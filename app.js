@@ -38,7 +38,7 @@ const todayISO = () => {
 };
 const emptyRecord = (date) => ({
   date,
-  menu: { totals: { calories: 0, proteins: 0, fats: 0, carbs: 0 } },
+  menu: { totals: { calories: 0, proteins: 0, fats: 0, carbs: 0 }, entries: [] },
   activity: { burned_calories: 0 },
   water: { goal_ml: savedWaterGoal(), consumed_ml: 0 },
 });
@@ -92,17 +92,43 @@ function displayDate(iso) {
   return `${day}.${month}.${year}`;
 }
 
+function normalizeMealEntries(entries) {
+  if (entries == null) return [];
+  if (!Array.isArray(entries)) throw new Error("Некорректный список приёмов пищи");
+  return entries.map((entry) => {
+    if (!entry || typeof entry !== "object") throw new Error("Некорректная запись приёма пищи");
+    const nutrients = Object.fromEntries(NUTRIENTS.map((key) => {
+      const value = numberFrom(entry[key]);
+      if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные КБЖУ приёма пищи");
+      return [key, value];
+    }));
+    const rawPortion = entry.portion_g;
+    const portion = rawPortion == null || rawPortion === "" ? null : numberFrom(rawPortion);
+    if (portion !== null && (!Number.isFinite(portion) || portion <= 0)) throw new Error("Некорректная порция блюда");
+    const addedAt = typeof entry.added_at === "string" && !Number.isNaN(Date.parse(entry.added_at)) ? entry.added_at : "";
+    return {
+      name: String(entry.name || "").trim().slice(0, 120),
+      portion_g: portion,
+      ...nutrients,
+      added_at: addedAt,
+    };
+  });
+}
+
 function validRecord(candidate, fallbackDate) {
   try {
     const date = String(candidate.date || fallbackDate || "");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(new Date(`${date}T12:00:00`).getTime())) {
       throw new Error("Некорректная дата записи");
     }
+    const menuSource = candidate.menu || {};
+    const totalsSource = menuSource.totals || {};
     const totals = Object.fromEntries(NUTRIENTS.map((key) => {
-      const value = numberFrom(candidate.menu.totals[key]);
+      const value = numberFrom(totalsSource[key]);
       if (!Number.isFinite(value) || value < 0) throw new Error("Некорректные значения меню");
       return [key, value];
     }));
+    const entries = normalizeMealEntries(menuSource.entries);
     const burned = numberFrom(candidate.activity.burned_calories);
     if (!Number.isFinite(burned) || burned < 0) throw new Error("Некорректное значение активности");
     const waterSource = candidate.water || {};
@@ -113,7 +139,7 @@ function validRecord(candidate, fallbackDate) {
     }
     return {
       date,
-      menu: { totals },
+      menu: { totals, entries },
       activity: { burned_calories: burned },
       water: { goal_ml: waterGoal, consumed_ml: waterConsumed },
     };
@@ -187,6 +213,7 @@ function render() {
   renderWater();
   renderSaveState("menu", menuDirty);
   renderSaveState("activity", activityDirty);
+  if ($("#meals-dialog")?.open) renderMealEntries();
 }
 
 function renderWater() {
@@ -397,7 +424,56 @@ function macroNode(label, value) {
   return node;
 }
 
+function addMealEntry({ name = "", portion = null, nutrients }) {
+  if (!Array.isArray(record.menu.entries)) record.menu.entries = [];
+  record.menu.entries.push({
+    name: String(name).trim().slice(0, 120),
+    portion_g: portion,
+    ...Object.fromEntries(NUTRIENTS.map((key) => [key, nutrients[key]])),
+    added_at: new Date().toISOString(),
+  });
+}
+
+function renderMealEntries() {
+  const entries = Array.isArray(record.menu.entries) ? record.menu.entries : [];
+  const body = $("#meals-table-body");
+  const table = $(".meals-table");
+  const empty = $("#meals-empty");
+  $("#meals-dialog-date").textContent = `${displayDate(activeDate)} · добавлений: ${entries.length}`;
+  const rows = entries.map((entry, index) => {
+    const row = document.createElement("tr");
+    const values = [
+      index + 1,
+      entry.name || "Без названия",
+      entry.portion_g == null ? "—" : `${format(entry.portion_g)} г`,
+      format(entry.calories),
+      format(entry.proteins),
+      format(entry.fats),
+      format(entry.carbs),
+    ];
+    row.append(...values.map((value) => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      return cell;
+    }));
+    return row;
+  });
+  body.replaceChildren(...rows);
+  table.hidden = entries.length === 0;
+  empty.hidden = entries.length > 0;
+  empty.textContent = record.menu.totals.calories > 0
+    ? "В меню есть итоговые значения, но для старых сохранений детализация приёмов пищи отсутствует."
+    : "За этот день еда ещё не добавлялась.";
+}
+
+function openMealEntries() {
+  renderMealEntries();
+  const dialog = $("#meals-dialog");
+  if (!dialog.open) dialog.showModal();
+}
+
 function chooseCatalogFood(food) {
+  $("#food-name").value = food.name;
   $("#food-calories").value = food.kcal;
   $("#food-proteins").value = food.protein;
   $("#food-fats").value = food.fat;
@@ -539,6 +615,10 @@ function addManual(selector, type) {
     const value = getPositive(selector, type === "menu" ? "Калории" : "Энергозатраты", { allowZero: false });
     if (type === "menu") {
       record.menu.totals.calories += value;
+      addMealEntry({
+        name: "Добавлено вручную",
+        nutrients: { calories: value, proteins: 0, fats: 0, carbs: 0 },
+      });
       menuDirty = true;
     } else {
       record.activity.burned_calories += value;
@@ -551,6 +631,7 @@ function addManual(selector, type) {
 
 function clearNutritionInputs() {
   for (const key of NUTRIENTS) $(`#result-${key}`).textContent = "—";
+  $("#food-name").value = "";
   $("#selected-food-caption").textContent = "Можно также заполнить КБЖУ вручную";
 }
 
@@ -1042,10 +1123,13 @@ function bindEvents() {
   $("#nutrition-add").addEventListener("click", () => {
     const calculated = calculateNutrition();
     if (!calculated) return;
+    const dishName = $("#food-name").value.trim();
+    const portion = numberFrom($("#food-portion").value);
     for (const key of NUTRIENTS) record.menu.totals[key] += calculated[key];
+    addMealEntry({ name: dishName, portion, nutrients: calculated });
     menuDirty = true;
     render();
-    toast("Порция добавлена в дневное меню.");
+    toast(`${dishName || "Порция без названия"} добавлена в дневное меню.`);
   });
   $("#nutrition-reset").addEventListener("click", clearNutritionInputs);
   $("#food-catalog-open").addEventListener("click", openFoodCatalog);
@@ -1088,6 +1172,7 @@ function bindEvents() {
   $("#manual-activity-add").addEventListener("click", () => addManual("#manual-activity", "activity"));
   $("#manual-menu").addEventListener("keydown", (event) => { if (event.key === "Enter") addManual("#manual-menu", "menu"); });
   $("#manual-activity").addEventListener("keydown", (event) => { if (event.key === "Enter") addManual("#manual-activity", "activity"); });
+  $("#meals-open").addEventListener("click", openMealEntries);
 
   $("#save-menu").addEventListener("click", () => savePart("menu"));
   $("#save-activity").addEventListener("click", () => savePart("activity"));

@@ -128,7 +128,9 @@ h1 em { color: var(--green); font-family: "Playfair Display", Georgia, serif; fo
 
 .field-grid { display: grid; gap: 15px; }
 .nutrition-fields { grid-template-columns: repeat(2, 1fr); }
+.nutrition-fields .food-name-field,
 .nutrition-fields .portion-field { grid-column: 1 / -1; }
+.food-name-field > span:first-child small { font-size: 9px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .input-unit { display: flex; align-items: center; min-height: 52px; padding: 0 15px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfa; transition: border-color .2s, box-shadow .2s; }
 .input-unit:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(33,92,66,.1); }
@@ -171,6 +173,7 @@ label > span:first-child, fieldset legend { display: block; margin-bottom: 8px; 
 .metric-grid span, .metric-grid small { display: block; color: var(--muted); font-size: 9px; }
 .metric-grid strong { display: inline-block; margin-top: 6px; font-size: 18px; }
 .metric-grid small { display: inline-block; margin-left: 2px; }
+.meals-open-button { width: 100%; margin-top: 12px; color: var(--green); background: #fff; }
 .manual-row { display: flex; align-items: end; gap: 8px; margin-top: 18px; }
 .manual-row label { flex: 1; }
 .input-unit.compact { min-height: 40px; background: #fff; }
@@ -254,6 +257,18 @@ dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
 .food-badge { display: inline-block; margin-right: 6px; padding: 2px 5px; border-radius: 5px; color: var(--green); background: var(--green-soft); font-size: 7px; font-weight: 800; }
 .food-empty { padding: 50px 20px; color: var(--muted); text-align: center; }
 .food-show-more { width: 100%; margin-top: 12px; }
+.meals-dialog { width: min(960px, calc(100% - 28px)); }
+.meals-dialog-head { position: relative; padding: 27px 74px 18px 30px; border-bottom: 1px solid var(--line); }
+.meals-dialog-head h2 { margin: 0 0 4px; }
+.meals-dialog-head p { margin-bottom: 0; }
+.meals-table-wrap { padding: 20px 24px 28px; overflow-x: auto; }
+.meals-table { width: 100%; min-width: 720px; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.meals-table th, .meals-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+.meals-table th { color: var(--muted); background: #f7f9f5; font-size: 9px; letter-spacing: .05em; text-transform: uppercase; }
+.meals-table th:nth-child(2), .meals-table td:nth-child(2) { width: 100%; min-width: 220px; text-align: left; white-space: normal; }
+.meals-table td { font-size: 11px; }
+.meals-table td:nth-child(2) { color: var(--ink); font-size: 12px; font-weight: 700; }
+.meals-empty { margin: 18px 0 0; padding: 24px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
 fieldset { display: flex; gap: 9px; margin: 27px 0 18px; padding: 0; border: 0; }
 fieldset legend { margin-bottom: 8px; }
 .radio-card { flex: 1; }
@@ -316,7 +331,7 @@ fieldset legend { margin-bottom: 8px; }
   .water-card { padding: 25px 18px; border-radius: 22px; }
   .water-layout { grid-template-columns: 1fr 1fr; gap: 25px; }
   .nutrition-fields { grid-template-columns: 1fr; }
-  .nutrition-fields .portion-field { grid-column: auto; }
+  .nutrition-fields .food-name-field, .nutrition-fields .portion-field { grid-column: auto; }
   .result-strip { grid-template-columns: repeat(2, 1fr); }
   .result-strip > p { grid-column: 1 / -1; }
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -341,6 +356,9 @@ fieldset legend { margin-bottom: 8px; }
   .food-breadcrumbs { top: -16px; margin: -16px -14px 8px; padding: 13px 14px 10px; }
   .food-item { grid-template-columns: 1fr; gap: 10px; }
   .food-item-macros { text-align: left; }
+  .meals-dialog { width: 100%; max-width: none; max-height: none; height: 100dvh; border-radius: 0; }
+  .meals-dialog-head { padding: 20px 66px 14px 18px; }
+  .meals-table-wrap { padding: 14px 12px 24px; }
   footer { flex-direction: column; gap: 13px; }
   footer .text-button { align-self: flex-start; }
 }
