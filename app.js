@@ -640,7 +640,7 @@ function addManual(selector, type) {
     if (type === "menu") {
       record.menu.totals.calories += value;
       addMealEntry({
-        name: "Добавлено вручную",
+        name: "Калории вручную",
         nutrients: { calories: value, proteins: 0, fats: 0, carbs: 0 },
       });
       menuDirty = true;
