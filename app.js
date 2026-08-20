@@ -434,6 +434,21 @@ function addMealEntry({ name = "", portion = null, nutrients }) {
   });
 }
 
+function deleteMealEntry(index) {
+  const entries = Array.isArray(record.menu.entries) ? record.menu.entries : [];
+  const entry = entries[index];
+  if (!entry) return;
+  const name = entry.name || "приём пищи без названия";
+  if (!confirm(`Удалить «${name}» из дневного меню?`)) return;
+  entries.splice(index, 1);
+  for (const key of NUTRIENTS) {
+    record.menu.totals[key] = Math.max(0, record.menu.totals[key] - entry[key]);
+  }
+  menuDirty = true;
+  render();
+  toast(`«${name}» удалено. Сохраните меню.`);
+}
+
 function renderMealEntries() {
   const entries = Array.isArray(record.menu.entries) ? record.menu.entries : [];
   const body = $("#meals-table-body");
@@ -456,6 +471,15 @@ function renderMealEntries() {
       cell.textContent = value;
       return cell;
     }));
+    const actionCell = document.createElement("td");
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "meal-delete";
+    deleteButton.dataset.mealIndex = index;
+    deleteButton.setAttribute("aria-label", `Удалить ${entry.name || "приём пищи без названия"}`);
+    deleteButton.textContent = "Удалить";
+    actionCell.append(deleteButton);
+    row.append(actionCell);
     return row;
   });
   body.replaceChildren(...rows);
@@ -1173,6 +1197,11 @@ function bindEvents() {
   $("#manual-menu").addEventListener("keydown", (event) => { if (event.key === "Enter") addManual("#manual-menu", "menu"); });
   $("#manual-activity").addEventListener("keydown", (event) => { if (event.key === "Enter") addManual("#manual-activity", "activity"); });
   $("#meals-open").addEventListener("click", openMealEntries);
+  $("#meals-table-body").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-meal-index]");
+    if (!button) return;
+    deleteMealEntry(Number(button.dataset.mealIndex));
+  });
 
   $("#save-menu").addEventListener("click", () => savePart("menu"));
   $("#save-activity").addEventListener("click", () => savePart("activity"));

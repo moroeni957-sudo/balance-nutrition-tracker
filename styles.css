@@ -29,6 +29,7 @@ button, input, select, textarea { font: inherit; }
 button { color: inherit; }
 button, select { cursor: pointer; }
 input, select, textarea { min-width: 0; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 
 .site-header {
   position: sticky;
@@ -268,6 +269,8 @@ dialog h2 { margin-bottom: 9px; font-size: 31px; letter-spacing: -.045em; }
 .meals-table th:nth-child(2), .meals-table td:nth-child(2) { width: 100%; min-width: 220px; text-align: left; white-space: normal; }
 .meals-table td { font-size: 11px; }
 .meals-table td:nth-child(2) { color: var(--ink); font-size: 12px; font-weight: 700; }
+.meal-delete { padding: 7px 10px; border: 1px solid #e6c8c0; border-radius: 9px; color: #9c3427; background: #fff7f4; font: inherit; font-weight: 700; cursor: pointer; transition: border-color .2s, background .2s; }
+.meal-delete:hover, .meal-delete:focus-visible { border-color: #bf6557; background: #ffebe6; outline: none; }
 .meals-empty { margin: 18px 0 0; padding: 24px; border: 1px dashed var(--line); border-radius: 14px; text-align: center; }
 fieldset { display: flex; gap: 9px; margin: 27px 0 18px; padding: 0; border: 0; }
 fieldset legend { margin-bottom: 8px; }
