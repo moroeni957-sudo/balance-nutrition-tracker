@@ -1023,14 +1023,19 @@ def main(public_build=False, output_path=OUTPUT):
         translated_seen.add(key)
         foods.append(item)
     if public_build:
-        foods = [item for item in foods if item["source"] != "МЗР — официальная офлайн-таблица"]
+        # Public build excludes sources without confirmed redistribution rights.
+        foods = [item for item in foods if item["source"] not in {
+            "МЗР — официальная офлайн-таблица", "Школа №65 — таблица калорийности"
+        }]
     foods.sort(key=lambda item: (item["level"], item["group"], item["subgroup"], item["name"], item["original"]))
 
     columns = ("id", "level", "group", "subgroup", "name", "original", "kcal", "protein", "fat", "carbs", "source", "sourceUrl")
     compact = [[item.get(key, "") for key in columns] for item in foods]
     payload = json.dumps(compact, ensure_ascii=False, separators=(",", ":"))
     local_notice = " LOCAL-ONLY: includes the MZR offline table; do not publish this generated file."
-    database_version = "2026-08-20-local-mzr-school65" if health_diet and school65 else "2026-08-20-local-mzr" if health_diet else "2026-08-20-public-school65" if school65 else "2026-08-20-public"
+    database_version = ("2026-08-20-public-safe" if public_build else
+                        "2026-08-20-local-mzr-school65" if health_diet and school65 else
+                        "2026-08-20-local-mzr" if health_diet else "2026-08-20-public")
     script = (
         "/* Generated from USDA FoodData Central, Anses-CIQUAL 2025, BLS 4.0 and curated regional recipes."
         + (local_notice if health_diet and not public_build else "") + " */\n"
@@ -1058,7 +1063,7 @@ def main(public_build=False, output_path=OUTPUT):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--public", action="store_true", help="Exclude sources without confirmed redistribution rights")
+    parser.add_argument("--public", action="store_true", help="Exclude MZR and school-table sources from public redistribution")
     parser.add_argument("--output", type=Path, default=OUTPUT, help="Generated JavaScript file")
     arguments = parser.parse_args()
     main(public_build=arguments.public, output_path=arguments.output)
